@@ -39,6 +39,26 @@
     frutta:  '<img src="icons/frutta.png" alt="" width="36" height="36">',
     merenda: '<img src="icons/merenda.png" alt="" width="36" height="36">'
   };
+  var ALLERGENS = {
+    1:"Glutine", 2:"Crostacei", 3:"Uova", 4:"Pesce", 5:"Arachidi",
+    6:"Soia", 7:"Latte", 8:"Frutta a guscio", 9:"Sedano", 10:"Senape",
+    11:"Sesamo", 12:"Solfiti", 13:"Lupini", 14:"Molluschi"
+  };
+  function parseCodes(raw){
+    var seen = {};
+    return String(raw || "").split(/[^0-9]+/).map(function(n){ return +n; }).filter(function(n){
+      if (n < 1 || n > 14 || seen[n]) return false;
+      seen[n] = 1;
+      return true;
+    });
+  }
+  function allergenBox(codes){
+    var list = parseCodes(codes);
+    if (!list.length) return "<div class='course-extra'><p class=status>Nessun allergene indicato su questa portata.</p></div>";
+    return "<div class='course-extra'><div class=label>Allergeni</div><div class=tags>" + list.map(function(n){
+      return "<span class=tag>" + n + " · " + esc(ALLERGENS[n] || "") + "</span>";
+    }).join("") + "</div></div>";
+  }
 
   function isoWeekNumber(d){
     var date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -59,11 +79,14 @@
   }
   function mealHtml(d, weekIdx, dayId){
     var rows = [
-      ["primo","Primo",d.primo],["secondo","Secondo",d.secondo],["contorno","Contorno",d.contorno],
-      ["frutta","Frutta",d.frutta],["merenda","Merenda",d.merenda]
+      ["primo","Primo",d.primo,d.primoA],
+      ["secondo","Secondo",d.secondo,d.secondoA],
+      ["contorno","Contorno",d.contorno,d.contornoA],
+      ["frutta","Frutta",d.frutta,d.fruttaA],
+      ["merenda","Merenda",d.merenda,d.merendaA]
     ].filter(function(x){ return x[2]; });
     var body = rows.length ? rows.map(function(x){
-      return "<div class=course><div class='ico svg-"+x[0]+"'>"+ICONS[x[0]]+"</div><div><div class=label>"+x[1]+"</div><div class=dish>"+esc(x[2])+"</div></div></div>";
+      return "<div class=course><div class='ico svg-"+x[0]+"'>"+ICONS[x[0]]+"</div><div><div class=label>"+x[1]+"</div><div class=dish>"+esc(x[2])+"</div><div class=hint>Tocca per gli allergeni</div></div>"+allergenBox(x[3])+"</div>";
     }).join("") : "<p class=status>Giorno vuoto. Tocca Correggi.</p>";
     return "<article class=meal-card><h2>"+DAYS.find(function(x){return x.id===dayId;}).label+" <button class=edit-btn data-edit="+weekIdx+":"+dayId+">Correggi</button></h2>"+body+"</article>";
   }
@@ -120,6 +143,12 @@
     }).join("");
   }
   function bind(){
+    document.querySelectorAll(".course").forEach(function(el){
+      el.onclick = function(e){
+        if (e.target.closest(".edit-btn")) return;
+        el.classList.toggle("open");
+      };
+    });
     document.querySelectorAll("[data-edit]").forEach(function(b){ b.onclick = function(){ openEdit(b.getAttribute("data-edit")); }; });
     document.querySelectorAll("[data-week]").forEach(function(b){ b.onclick = function(){ state.week=+b.getAttribute("data-week"); renderSettimane(); bind(); }; });
     document.querySelectorAll("[data-day]").forEach(function(b){ b.onclick = function(){ state.day=b.getAttribute("data-day"); renderSettimane(); bind(); }; });
