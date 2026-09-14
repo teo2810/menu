@@ -3,21 +3,22 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
-<meta name="theme-color" content="#5B4D86" />
+<meta name="theme-color" content="#D9C7F2" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Menu" />
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icon.svg" />
+<link rel="apple-touch-icon" href="icon.svg" />
 <title>Menu</title>
-<meta name="app-build" content="v10" />
+<meta name="app-build" content="v11" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
 :root {
   --bg:#f3eef8;
   --card:#fffdfb;
-  --ink:#4a4458;
+  --ink:#3d3554;
   --muted:#8b8296;
   --lilac:#d9c7f2;
   --mint:#b7e2d4;
@@ -90,16 +91,16 @@ main { flex:1; overflow:auto; padding:6px 16px calc(var(--nav-h) + var(--safe-b)
   margin:0 0 6px; font-family:Fraunces,serif; font-size:1.12rem;
   display:flex; justify-content:space-between; align-items:center;
 }
-.edit-btn { background:#f3e8fb; color:var(--brand-2); font-size:.72rem; padding:6px 10px; border-radius:999px; }
-.course { display:grid; grid-template-columns:36px 1fr; gap:10px; padding:7px 0; border-top:1px dashed var(--line); align-items:center; }
+.edit-btn { background:#eadcf9; color:var(--brand-2); font-size:.72rem; padding:6px 10px; border-radius:999px; }
+.course { display:grid; grid-template-columns:48px 1fr; gap:12px; padding:10px 0; border-top:1px solid var(--line); align-items:center; }
 .course:first-of-type { border-top:0; }
-.ico { width:36px; height:36px; border-radius:11px; display:grid; place-items:center; flex-shrink:0; }
-.ico.svg-primo { background:#f3e8fb; color:#6f5f8a; }
-.ico.svg-secondo { background:#fde3ea; color:#8a4a62; }
-.ico.svg-contorno { background:#d9f3ea; color:#2f5b50; }
-.ico.svg-frutta { background:#fbe9c8; color:#7a5a20; }
-.ico.svg-merenda { background:#dceafb; color:#3a5878; }
-.ico svg { width:18px; height:18px; }
+.ico { width:48px; height:48px; border-radius:14px; display:grid; place-items:center; flex-shrink:0; }
+.ico.svg-primo { background:#eadcf9; }
+.ico.svg-secondo { background:#f8d4c8; }
+.ico.svg-contorno { background:#c8ebd8; }
+.ico.svg-frutta { background:#f6e6a8; }
+.ico.svg-merenda { background:#c5e4f5; }
+.ico svg { width:30px; height:30px; overflow:visible; }
 .course .label { font-size:.62rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); font-weight:800; }
 .course .dish { font-weight:800; line-height:1.22; font-size:.92rem; }
 .tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
@@ -176,7 +177,7 @@ nav.tabbar .blob.jump { animation:blobWobble 6.5s ease-in-out infinite, blobSqua
 nav.tabbar li { display:flex; }
 nav.tabbar a {
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
-  padding-bottom:10px; text-decoration:none; color:#3d3554; font-size:.66rem; font-weight:800;
+  padding-bottom:10px; text-decoration:none; color:#8b8296; font-size:.66rem; font-weight:800;
   gap:2px; position:relative; z-index:3;
 }
 nav.tabbar a .dot { width:24px; height:24px; display:grid; place-items:center; transition:transform .35s cubic-bezier(.22,1.2,.36,1); }
@@ -222,10 +223,10 @@ nav.tabbar li.on a .dot { transform:translateY(-34px); color:var(--blob-ink,#4a3
     <div class="tab-stage" id="tabStage">
       <div class="blob" id="tabBlob"></div>
       <ul id="tabList">
-        <li class="on" data-tab="oggi"><a href="#oggi"><span class="dot"><svg viewBox="0 0 24 24"><path d="M4 19h16v2H4v-2zm2-7h2v6H6v-6zm5 0h2v6h-2v-6zm5 0h2v6h-2v-6zM5 8l7-5 7 5v2H5V8z"/></svg></span>Oggi</a></li>
-        <li data-tab="settimane"><a href="#settimane"><span class="dot"><svg viewBox="0 0 24 24"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2zm11 8H6v10h12V10zM8 12h2v2H8v-2zm4 0h2v2h-2v-2z"/></svg></span>Settimane</a></li>
-        <li data-tab="importa"><a href="#importa"><span class="dot"><svg viewBox="0 0 24 24"><path d="M9 3l2-2h2l2 2h4v18H5V3h4zm3 5a5 5 0 100 10 5 5 0 000-10zm0 2.2a2.8 2.8 0 110 5.6 2.8 2.8 0 010-5.6z"/></svg></span>Importa</a></li>
-        <li data-tab="info"><a href="#info"><span class="dot"><svg viewBox="0 0 24 24"><path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h12v2H4v-2z"/></svg></span>Menu</a></li>
+        <li class="on" data-tab="oggi"><a href="#oggi"><span class="dot"><svg viewBox="0 0 24 24"><path d="M7 3h2v2h6V3h2v2h3v16H4V5h3V3zm12 8H5v10h14V11zM8 14h3v3H8v-3z"/></svg></span>Oggi</a></li>
+        <li data-tab="settimane"><a href="#settimane"><span class="dot"><svg viewBox="0 0 24 24"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2zm12 8H5v10h14V10zM7 12h2.2v2.2H7V12zm4 0h2.2v2.2H11V12zm4 0H17v2.2h-2V12zM7 16h2.2v2.2H7V16zm4 0h2.2v2.2H11V16z"/></svg></span>Settimane</a></li>
+        <li data-tab="importa"><a href="#importa"><span class="dot"><svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6V2zm9 1.2V8h4.6M12 10.5v7M12 17.5l-2.4-2.4M12 17.5l2.4-2.4"/></svg></span>Importa</a></li>
+        <li data-tab="info"><a href="#info"><span class="dot"><svg viewBox="0 0 24 24"><path d="M8 5h12v13H8V5z"/><path d="M4 8h12v13H4V8z" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>Menu</a></li>
       </ul>
     </div>
   </nav>
@@ -294,6 +295,6 @@ nav.tabbar li.on a .dot { transform:translateY(-34px); color:var(--blob-ink,#4a3
   window.setTab("oggi");
 })();
 </script>
-<script src="app.js?v=10"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>
