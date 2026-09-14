@@ -1,16 +1,24 @@
 (function () {
   const ALLERGENI = {1:"Glutine",2:"Crostacei",3:"Uova",4:"Pesce",5:"Arachidi",6:"Soia",7:"Latte e derivati",8:"Frutta a guscio",9:"Sedano",10:"Senape",11:"Sesamo",12:"Anidride solforosa / solfiti",13:"Lupini",14:"Molluschi",15:"Pomodoro",16:"Lievito / pinoli"};
   const DAYS = [
-    { id:"lunedi", short:"LUN", label:"Lunedi" },
-    { id:"martedi", short:"MAR", label:"Martedi" },
-    { id:"mercoledi", short:"MER", label:"Mercoledi" },
-    { id:"giovedi", short:"GIO", label:"Giovedi" },
-    { id:"venerdi", short:"VEN", label:"Venerdi" }
+    { id:"lunedi", short:"LUN", label:"Lunedì" },
+    { id:"martedi", short:"MAR", label:"Martedì" },
+    { id:"mercoledi", short:"MER", label:"Mercoledì" },
+    { id:"giovedi", short:"GIO", label:"Giovedì" },
+    { id:"venerdi", short:"VEN", label:"Venerdì" }
   ];
   const JS_DAY_TO_MENU = {1:"lunedi",2:"martedi",3:"mercoledi",4:"giovedi",5:"venerdi"};
   const STORE = "menu-library-v3";
+  const ICO = {
+    primo:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 11h16v2H4v-2zm2 4h12v6H6v-6zM7 4h2v6H7V4zm4 0h2v6h-2V4zm4 0h2v6h-2V4z"/></svg>',
+    secondo:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3c4 0 8 3 8 8 0 5-8 10-8 10S4 16 4 11c0-5 4-8 8-8zm0 3a5 5 0 00-5 5c0 2.6 3.2 5.6 5 7.1 1.8-1.5 5-4.5 5-7.1a5 5 0 00-5-5z"/></svg>',
+    contorno:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 4c4.4 0 8 2.2 8 5s-3.6 5-8 5-8-2.2-8-5 3.6-5 8-5zm-7 9.4C6.7 15 9.2 16 12 16s5.3-1 7-2.6V20H5v-6.6z"/></svg>',
+    frutta:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 7c2.8 1.2 4 3.8 4 6.5C20 17.5 16.4 21 12 21S4 17.5 4 13.5C4 9.6 7 7 10.5 7c.8 0 1.5.1 2.2.4C13.2 5.6 14.4 4 16.5 3 16.2 4.6 16.1 5.8 16 7z"/></svg>',
+    merenda:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 8h14l-1.2 11.2A2 2 0 0115.8 21H8.2a2 2 0 01-2-1.8L5 8zm3-3h8l1 3H7l1-3z"/></svg>'
+  };
+
   function meal(a,b,c,d,e,f,g,h){ return {primo:a||"",primoA:b||"",secondo:c||"",secondoA:d||"",contorno:e||"",frutta:f||"",merenda:g||"",merendaA:h||""}; }
-  function emptyDays(){ const o={}; DAYS.forEach(function(d){ o[d.id]=meal(); }); return o; }
+  function emptyDays(){ const o={}; DAYS.forEach(d => o[d.id]=meal()); return o; }
   function makeMenu(p){
     p = p || {};
     return {
@@ -42,21 +50,22 @@
   }
   const lib = loadLibrary();
   const state = { menus:lib.menus, activeId:lib.activeId, tab:"oggi", week:0, day:"lunedi", edit:null };
+
   function currentMenu(){
     if (!state.menus.length) return null;
-    return state.menus.find(function(m){ return m.id === state.activeId; }) || state.menus[0];
+    return state.menus.find(m => m.id === state.activeId) || state.menus[0];
   }
   function codes(str){
     if (!str) return [];
-    return String(str).split(/[^0-9]+/).map(Number).filter(function(n){ return n && ALLERGENI[n]; });
+    return String(str).split(/[^0-9]+/).map(Number).filter(n => n && ALLERGENI[n]);
   }
   function escapeHtml(s){
     return String(s || "").replace(/[&<>"']/g, function(c){
-      return ({ "&":"&", "<":"<", ">":">", "\"":""", "'":"&#39;" })[c];
+      return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c];
     });
   }
   function tagsHtml(str){
-    return codes(str).map(function(n){ return "<span class=\"tag\">" + n + " " + ALLERGENI[n] + "</span>"; }).join("");
+    return codes(str).map(n => '<span class="tag">' + n + " " + ALLERGENI[n] + "</span>").join("");
   }
   function todayInfo(){
     const now = new Date();
@@ -64,15 +73,12 @@
     const week = Math.min(3, Math.floor((now.getDate() - 1) / 7));
     return { now:now, dayId:dayId, week:week, weekend:!dayId };
   }
-  function icoBox(letter){
-    return "<div class=\"ico\"><b>" + letter + "</b></div>";
-  }
-  function course(letter, label, dish, all){
+  function course(kind, label, dish, all){
     if (!dish) return "";
-    return "<div class=\"course\">" + icoBox(letter) + "<div><div class=\"label\">" + label + "</div><div class=\"dish\">" + escapeHtml(dish) + "</div><div class=\"tags\">" + tagsHtml(all) + "</div></div></div>";
+    return '<div class="course"><div class="ico">' + ICO[kind] + '</div><div><div class="label">' + label + '</div><div class="dish">' + escapeHtml(dish) + '</div><div class="tags">' + tagsHtml(all) + "</div></div></div>";
   }
   function emptyState(msg){
-    return "<div class=\"meal-card empty\"><h2>Nessun menu</h2><p class=\"status\">" + msg + "</p><button class=\"btn btn-primary btn-wide\" id=\"goImport\">Importa il primo menu</button></div>";
+    return '<div class="meal-card empty"><h2>Nessun menu</h2><p class="status">' + msg + '</p><button class="btn btn-primary btn-wide" id="goImport">Importa il primo menu</button></div>';
   }
   function toast(msg){
     const el = document.getElementById("toast");
@@ -80,33 +86,36 @@
     el.classList.add("show");
     setTimeout(function(){ el.classList.remove("show"); }, 2200);
   }
+
   function renderHeader(){
     const m = currentMenu();
     const pick = document.getElementById("menuPick");
     if (!state.menus.length) {
-      pick.innerHTML = "<option value=\"\">Aggiungi un menu</option>";
+      pick.innerHTML = '<option value="">Aggiungi un menu</option>';
       pick.disabled = true;
       document.getElementById("periodPill").textContent = "Vuoto";
       return;
     }
     pick.disabled = false;
     pick.innerHTML = state.menus.map(function(item){
-      return "<option value=\"" + escapeHtml(item.id) + "\"" + (item.id===state.activeId ? " selected" : "") + ">" + escapeHtml(item.name) + "</option>";
+      return '<option value="' + escapeHtml(item.id) + '"' + (item.id===state.activeId ? " selected" : "") + ">" + escapeHtml(item.name) + "</option>";
     }).join("");
     document.getElementById("periodPill").textContent = m.period || m.title || "Senza periodo";
   }
+
   function renderMealCard(weekIdx, dayId, withEdit){
     const m = currentMenu();
     if (!m) return emptyState("Importa una foto o un file per partire.");
     const week = m.weeks[weekIdx];
-    if (!week) return "<div class=\"meal-card\"><p>Nessuna settimana.</p></div>";
+    if (!week) return '<div class="meal-card"><p>Nessuna settimana.</p></div>';
     const d = week.days[dayId];
-    const dayLabel = DAYS.find(function(x){ return x.id === dayId; }).label;
-    if (!d) return "<div class=\"meal-card\"><p>Nessun pasto per questo giorno.</p></div>";
-    const edit = withEdit ? " <button class=\"edit-btn\" data-edit=\"" + weekIdx + ":" + dayId + "\">Correggi</button>" : "";
-    const body = course("P","Primo",d.primo,d.primoA) + course("S","Secondo",d.secondo,d.secondoA) + course("C","Contorno",d.contorno,"") + course("F","Frutta",d.frutta,"") + course("M","Merenda",d.merenda,d.merendaA);
-    return "<article class=\"meal-card\"><h2>" + dayLabel + edit + "</h2>" + (body || "<p class=\"status\">Giorno vuoto. Tocca Correggi per compilare.</p>") + "</article>";
+    const dayLabel = DAYS.find(x => x.id === dayId).label;
+    if (!d) return '<div class="meal-card"><p>Nessun pasto per questo giorno.</p></div>';
+    const edit = withEdit ? ' <button class="edit-btn" data-edit="' + weekIdx + ":" + dayId + '">Correggi</button>' : "";
+    const body = course("primo","Primo",d.primo,d.primoA) + course("secondo","Secondo",d.secondo,d.secondoA) + course("contorno","Contorno",d.contorno,"") + course("frutta","Frutta",d.frutta,"") + course("merenda","Merenda",d.merenda,d.merendaA);
+    return '<article class="meal-card"><h2>' + dayLabel + edit + "</h2>" + (body || '<p class="status">Giorno vuoto. Tocca Correggi per compilare.</p>') + "</article>";
   }
+
   function renderOggi(){
     const m = currentMenu();
     const box = document.getElementById("screen-oggi");
@@ -115,50 +124,58 @@
     const nice = t.now.toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" });
     const weekName = (m.weeks[t.week] && m.weeks[t.week].name) || "";
     const body = t.weekend
-      ? "<div class=\"meal-card\"><p>Oggi non c'e mensa. Apri Settimane per vedere i giorni.</p></div>"
+      ? '<div class="meal-card"><p>Oggi non c\'e mensa. Apri Settimane per vedere i giorni.</p></div>'
       : renderMealCard(t.week, t.dayId, true);
-    const notes = (m.notes||[]).map(function(n){ return "<div class=\"note\">" + escapeHtml(n) + "</div>"; }).join("");
-    box.innerHTML = "<div class=\"hero-today\"><div class=\"kicker\">" + escapeHtml(m.name) + "</div><h2>" + nice + "</h2><p>" + escapeHtml(m.title || weekName) + " \u00b7 " + escapeHtml(m.period || "") + "</p></div>" + body + notes;
+    const notes = (m.notes||[]).map(function(n){ return '<div class="note">' + escapeHtml(n) + "</div>"; }).join("");
+    box.innerHTML = '<div class="hero-today"><div class="kicker">' + escapeHtml(m.name) + "</div><h2>" + nice + "</h2><p>" + escapeHtml(m.title || weekName) + " · " + escapeHtml(m.period || "") + "</p></div>" + body + notes;
   }
+
   function renderSettimane(){
     const m = currentMenu();
     const box = document.getElementById("screen-settimane");
     if (!m) { box.innerHTML = emptyState("Aggiungi un menu per sfogliare le settimane."); return; }
     const tabs = m.weeks.map(function(w,i){
-      return "<button class=\"week-tab" + (i===state.week?" on":"") + "\" data-week=\"" + i + "\">" + escapeHtml(w.name.replace(" settimana","")) + "</button>";
+      return '<button class="week-tab' + (i===state.week?" on":"") + '" data-week="' + i + '">' + escapeHtml(w.name.replace(" settimana","")) + "</button>";
     }).join("");
     const chips = DAYS.map(function(d){
-      return "<button class=\"day-chip" + (d.id===state.day?" on":"") + "\" data-day=\"" + d.id + "\"><small>" + d.short + "</small><b>" + d.label.slice(0,3) + "</b></button>";
+      return '<button class="day-chip' + (d.id===state.day?" on":"") + '" data-day="' + d.id + '"><small>' + d.short + "</small><b>" + d.label.slice(0,3) + "</b></button>";
     }).join("");
-    box.innerHTML = "<div class=\"week-tabs\">" + tabs + "</div><div class=\"day-rail\">" + chips + "</div>" + renderMealCard(state.week, state.day, true);
+    box.innerHTML = '<div class="week-tabs">' + tabs + '</div><div class="day-rail">' + chips + "</div>" + renderMealCard(state.week, state.day, true);
   }
+
   function renderImporta(){
     document.getElementById("screen-importa").innerHTML =
-      "<div class=\"drop\"><h3>Nuovo menu</h3><p>Dai un nome (scuola, stagione o tipo), poi fotografa o allega il foglio.</p>" +
-      "<div class=\"field\" style=\"text-align:left\"><label>Nome menu</label><input id=\"imp-name\" placeholder=\"es. Scuola X \u00b7 Settembre\" /></div>" +
-      "<div class=\"actions\"><button class=\"btn btn-primary\" id=\"btnFoto\">Scatta foto</button><button class=\"btn btn-ghost\" id=\"btnFile\">Allega file</button></div>" +
-      "<input id=\"fileCam\" type=\"file\" accept=\"image/*\" capture=\"environment\" hidden />" +
-      "<input id=\"fileAny\" type=\"file\" accept=\"image/*,application/pdf\" hidden /></div><div id=\"importWork\"></div>" +
-      "<button class=\"btn btn-ghost btn-wide\" id=\"btnBlank\">Crea menu vuoto da compilare</button>" +
-      "<div class=\"note\">Il riconoscimento puo sbagliare. Controlla sempre prima di salvare.</div>";
+      '<div class="drop">' +
+      '<svg viewBox="0 0 24 24" width="36" height="36" fill="#e85d4c"><path d="M9 3l2-2h2l2 2h4v18H5V3h4zm3 5a5 5 0 100 10 5 5 0 000-10z"/></svg>' +
+      "<h3>Nuovo menu</h3>" +
+      "<p>Dai un nome (scuola, stagione o tipo), poi fotografa o allega il foglio.</p>" +
+      '<div class="field" style="text-align:left"><label>Nome menu</label><input id="imp-name" placeholder="es. Scuola X · Settembre" /></div>' +
+      '<div class="actions"><button class="btn btn-primary" id="btnFoto">Scatta foto</button><button class="btn btn-ghost" id="btnFile">Allega file</button></div>' +
+      '<input id="fileCam" type="file" accept="image/*" capture="environment" hidden />' +
+      '<input id="fileAny" type="file" accept="image/*,application/pdf" hidden />' +
+      "</div><div id=\"importWork\"></div>" +
+      '<button class="btn btn-ghost btn-wide" id="btnBlank">Crea menu vuoto da compilare</button>' +
+      '<div class="note">Il riconoscimento puo sbagliare. Controlla sempre prima di salvare.</div>';
   }
+
   function renderInfo(){
     const m = currentMenu();
     const list = state.menus.length
       ? state.menus.map(function(item){
-          return "<div class=\"allergen-row\" style=\"justify-content:space-between\"><div><b>" + escapeHtml(item.name) + "</b><div class=\"status\">" + escapeHtml(item.period || item.title || "") + "</div></div><div style=\"display:flex;gap:6px;flex-wrap:wrap\"><button class=\"edit-btn\" data-use=\"" + item.id + "\">" + (item.id===state.activeId?"Attivo":"Apri") + "</button><button class=\"edit-btn\" data-ren=\"" + item.id + "\">Nome</button>" + (state.menus.length>1 ? "<button class=\"edit-btn\" data-del=\"" + item.id + "\">Elimina</button>" : "") + "</div></div>";
+          return '<div class="allergen-row" style="justify-content:space-between"><div><b>' + escapeHtml(item.name) + '</b><div class="status">' + escapeHtml(item.period || item.title || "") + '</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="edit-btn" data-use="' + item.id + '">' + (item.id===state.activeId?"Attivo":"Apri") + '</button><button class="edit-btn" data-ren="' + item.id + '">Nome</button>' + (state.menus.length>1 ? '<button class="edit-btn" data-del="' + item.id + '">Elimina</button>' : "") + "</div></div>";
         }).join("")
-      : "<div class=\"note\">Ancora nessun menu. Vai su Importa.</div>";
+      : '<div class="note">Ancora nessun menu. Vai su Importa.</div>';
     document.getElementById("screen-info").innerHTML =
-      "<h3 style=\"font-family:Fraunces,serif;margin:8px 0\">I tuoi menu</h3>" +
-      "<p class=\"status\">Ogni voce e un menu a se. Cambia anche dal nome in alto.</p>" +
-      "<div class=\"allergen-list\">" + list + "</div>" +
-      (m ? "<div class=\"meal-card\" style=\"margin-top:14px\"><h2>Menu attivo</h2><p class=\"dish\">" + escapeHtml(m.name) + "</p><p class=\"status\">" + escapeHtml(m.title || "") + " " + escapeHtml(m.period || "") + "</p></div>" : "") +
-      "<h3 style=\"font-family:Fraunces,serif\">Allergeni</h3>" +
-      "<div class=\"allergen-list\">" + Object.keys(ALLERGENI).map(function(n){
-        return "<div class=\"allergen-row\"><div class=\"allergen-num\">" + n + "</div><div><b>" + ALLERGENI[n] + "</b></div></div>";
+      '<h3 style="font-family:Fraunces,serif;margin:8px 0">I tuoi menu</h3>' +
+      '<p class="status">Ogni voce e un menu a se. Cambia anche dal nome in alto.</p>' +
+      '<div class="allergen-list">' + list + "</div>" +
+      (m ? '<div class="meal-card" style="margin-top:14px"><h2>Menu attivo</h2><p class="dish">' + escapeHtml(m.name) + '</p><p class="status">' + escapeHtml(m.title || "") + " " + escapeHtml(m.period || "") + "</p></div>" : "") +
+      '<h3 style="font-family:Fraunces,serif">Allergeni</h3>' +
+      '<div class="allergen-list">' + Object.keys(ALLERGENI).map(function(n){
+        return '<div class="allergen-row"><div class="allergen-num">' + n + "</div><div><b>" + ALLERGENI[n] + "</b></div></div>";
       }).join("") + "</div>";
   }
+
   function bindStatic(){
     document.querySelectorAll("[data-edit]").forEach(function(btn){ btn.onclick = function(){ openEdit(btn.dataset.edit); }; });
     document.querySelectorAll("[data-week]").forEach(function(btn){ btn.onclick = function(){ state.week = +btn.dataset.week; renderSettimane(); bindStatic(); }; });
@@ -207,9 +224,11 @@
       renderAll();
     };
   }
+
   function renderAll(){
     renderHeader(); renderOggi(); renderSettimane(); renderImporta(); renderInfo(); bindStatic();
   }
+
   function openEdit(key){
     const m = currentMenu();
     if (!m) return;
@@ -217,12 +236,13 @@
     const w = +parts[0], d = parts[1];
     const mealObj = m.weeks[w].days[d];
     state.edit = { w:w, d:d };
-    document.getElementById("editMeta").textContent = m.name + " \u00b7 " + m.weeks[w].name + " \u00b7 " + DAYS.find(function(x){ return x.id === d; }).label;
+    document.getElementById("editMeta").textContent = m.name + " · " + m.weeks[w].name + " · " + DAYS.find(x => x.id === d).label;
     ["primo","primoA","secondo","secondoA","contorno","frutta","merenda","merendaA"].forEach(function(k){
       document.getElementById("f-" + k).value = mealObj[k] || "";
     });
     document.getElementById("editModal").classList.add("open");
   }
+
   document.getElementById("closeEdit").onclick = function(){ document.getElementById("editModal").classList.remove("open"); };
   document.getElementById("saveEdit").onclick = function(){
     if (!state.edit || !currentMenu()) return;
@@ -235,6 +255,7 @@
     toast("Giorno aggiornato");
     renderAll();
   };
+
   const tabList = document.getElementById("tabList");
   function setTab(name){
     state.tab = name;
@@ -252,6 +273,7 @@
   addEventListener("resize", function(){ setTab(state.tab); });
   setTimeout(function(){ setTab("oggi"); }, 40);
   document.getElementById("periodPill").addEventListener("click", function(){ setTab("info"); });
+
   let tessWorker = null;
   function loadScript(src){
     return new Promise(function(res, rej){
@@ -263,10 +285,10 @@
   async function handleFile(file){
     if (!file) return;
     const work = document.getElementById("importWork");
-    work.innerHTML = "<div class=\"meal-card\"><div class=\"status\">Preparazione file...</div><div class=\"preview-wrap\" id=\"preview\"></div><div class=\"progress\"><i id=\"bar\"></i></div><div class=\"status\" id=\"ocrStatus\">Attendi</div></div>";
+    work.innerHTML = '<div class="meal-card"><div class="status">Preparazione file...</div><div class="preview-wrap" id="preview"></div><div class="progress"><i id="bar"></i></div><div class="status" id="ocrStatus">Attendi</div></div>';
     try {
       const imageUrl = file.type === "application/pdf" ? await pdfFirstPage(file) : URL.createObjectURL(file);
-      document.getElementById("preview").innerHTML = "<img alt=\"Anteprima menu\" src=\"" + imageUrl + "\" />";
+      document.getElementById("preview").innerHTML = '<img alt="Anteprima menu" src="' + imageUrl + '" />';
       showReview(await runOcr(imageUrl));
     } catch (err) {
       document.getElementById("ocrStatus").textContent = "Errore: " + err.message;
@@ -305,7 +327,7 @@
     return (await tessWorker.recognize(url)).data.text || "";
   }
   function cleanLine(s){
-    return s.replace(/\s+/g, " ").replace(/\b\d{1,2}([-\u2013]\d{1,2})+\b/g, "").trim();
+    return s.replace(/\s+/g, " ").replace(/\b\d{1,2}([-–]\d{1,2})+\b/g, "").trim();
   }
   function parseMenuText(text){
     const weeks = [
@@ -315,14 +337,16 @@
       { name:"Quarta settimana", days:emptyDays() }
     ];
     let weekIdx = 0, dayId = "lunedi";
+    const dayMap = { lunedi:"lunedi", "lunedi":"lunedi", martedi:"martedi", mercoledi:"mercoledi", giovedi:"giovedi", venerdi:"venerdi" };
     String(text || "").split(/\n+/).map(function(l){ return l.trim(); }).filter(Boolean).forEach(function(line){
       const low = line.toLowerCase();
       if (/prima settimana/.test(low)) weekIdx = 0;
       if (/second[ao] settimana/.test(low)) weekIdx = 1;
       if (/terza settimana/.test(low)) weekIdx = 2;
       if (/quarta settimana/.test(low)) weekIdx = 3;
-      ["lunedi","lunedi","martedi","martedi","mercoledi","mercoledi","giovedi","giovedi","venerdi","venerdi"].forEach(function(k){
-        if (low === k || low.startsWith(k + " ")) dayId = k;
+      ["lunedi","lunedì","martedi","martedì","mercoledi","mercoledì","giovedi","giovedì","venerdi","venerdì"].forEach(function(k){
+        const key = k.replace("ì","i");
+        if (low === k || low.startsWith(k + " ")) dayId = key;
       });
       const slot = weeks[weekIdx].days[dayId];
       if (!slot) return;
@@ -340,30 +364,30 @@
   }
   function guessPeriod(text){
     const m = String(text||"").match(/dal\s*(\d{1,2}\/\d{1,2})\s*al\s*(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/i);
-    return m ? m[1] + " \u2013 " + m[2] : "";
+    return m ? m[1] + " – " + m[2] : "";
   }
   function drawParsePreview(weeks){
     const el = document.getElementById("parsePreview");
     if (!el) return;
     el.innerHTML = weeks.map(function(w){
-      return "<div class=\"meal-card\"><h2>" + w.name + "</h2>" + DAYS.map(function(d){
+      return '<div class="meal-card"><h2>' + w.name + "</h2>" + DAYS.map(function(d){
         const mealObj = w.days[d.id];
-        return "<p><b>" + d.label + "</b> \u2014 " + escapeHtml(mealObj.primo || "...") + " / " + escapeHtml(mealObj.secondo || "...") + "</p>";
+        return "<p><b>" + d.label + "</b> — " + escapeHtml(mealObj.primo || "...") + " / " + escapeHtml(mealObj.secondo || "...") + "</p>";
       }).join("") + "</div>";
     }).join("");
   }
   function showReview(text){
     window.__parsedWeeks = parseMenuText(text);
     document.getElementById("importWork").innerHTML +=
-      "<div class=\"meal-card\"><h2>Testo riconosciuto</h2>" +
-      "<p class=\"status\">Correggi se il riconoscimento ha sbagliato, poi salva come nuovo menu.</p>" +
-      "<div class=\"field\"><label>Nome menu</label><input id=\"imp-title-name\" value=\"" + escapeHtml(proposedName()) + "\" /></div>" +
-      "<div class=\"field\"><label>Periodo / stagione</label><input id=\"imp-period\" value=\"" + escapeHtml(guessPeriod(text)) + "\" /></div>" +
-      "<div class=\"field\"><label>Testo grezzo</label><textarea id=\"imp-raw\">" + escapeHtml(text) + "</textarea></div>" +
-      "<button class=\"btn btn-ghost btn-wide\" id=\"reparse\">Ri-analizza il testo corretto</button>" +
-      "<button class=\"btn btn-primary btn-wide\" id=\"applyParse\">Salva come nuovo menu</button>" +
-      (currentMenu() ? "<button class=\"btn btn-ghost btn-wide\" id=\"replaceParse\">Sostituisci il menu attivo</button>" : "") +
-      "</div><div id=\"parsePreview\"></div>";
+      '<div class="meal-card"><h2>Testo riconosciuto</h2>' +
+      '<p class="status">Correggi se il riconoscimento ha sbagliato, poi salva come nuovo menu.</p>' +
+      '<div class="field"><label>Nome menu</label><input id="imp-title-name" value="' + escapeHtml(proposedName()) + '" /></div>' +
+      '<div class="field"><label>Periodo / stagione</label><input id="imp-period" value="' + escapeHtml(guessPeriod(text)) + '" /></div>' +
+      '<div class="field"><label>Testo grezzo</label><textarea id="imp-raw">' + escapeHtml(text) + "</textarea></div>" +
+      '<button class="btn btn-ghost btn-wide" id="reparse">Ri-analizza il testo corretto</button>' +
+      '<button class="btn btn-primary btn-wide" id="applyParse">Salva come nuovo menu</button>' +
+      (currentMenu() ? '<button class="btn btn-ghost btn-wide" id="replaceParse">Sostituisci il menu attivo</button>' : "") +
+      '</div><div id="parsePreview"></div>';
     drawParsePreview(window.__parsedWeeks);
     document.getElementById("reparse").onclick = function(){
       window.__parsedWeeks = parseMenuText(document.getElementById("imp-raw").value);
@@ -390,6 +414,7 @@
     setTab("settimane");
     renderAll();
   }
+
   let touchX = null;
   document.getElementById("screen-settimane").addEventListener("touchstart", function(e){ touchX = e.changedTouches[0].clientX; }, { passive:true });
   document.getElementById("screen-settimane").addEventListener("touchend", function(e){
@@ -400,6 +425,7 @@
     if (dx < -50 && idx < DAYS.length - 1) { state.day = DAYS[idx + 1].id; renderSettimane(); bindStatic(); }
     if (dx > 50 && idx > 0) { state.day = DAYS[idx - 1].id; renderSettimane(); bindStatic(); }
   }, { passive:true });
+
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(function(){});
   renderAll();
 })();
