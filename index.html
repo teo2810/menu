@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icon.svg" />
 <title>Menu</title>
-<meta name="app-build" content="v8" />
+<meta name="app-build" content="v9" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -129,6 +129,8 @@ textarea, input:not(.menu-pick), select:not(.menu-pick) {
   border-radius:12px; padding:10px 12px; background:#fff; color:var(--ink); font-size:.9rem;
 }
 textarea { min-height:140px; resize:vertical; }
+#promptBox { min-height:190px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.72rem; color:var(--muted); }
+#jsonPaste { min-height:110px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.78rem; }
 .field { margin:10px 0; }
 .field label { display:block; font-size:.72rem; font-weight:800; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:.04em; }
 .progress { height:8px; background:#eadff3; border-radius:99px; overflow:hidden; margin:10px 0; }
@@ -269,6 +271,6 @@ nav.tabbar li.on a .dot { transform:translateY(-34px); color:#fff; }
   window.setTab("oggi");
 })();
 </script>
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

@@ -29,8 +29,16 @@
   function esc(s){
     return String(s || "").replace(/&/g,"&"+"amp;").replace(/</g,"&"+"lt;").replace(/>/g,"&"+"gt;").replace(/"/g,"&"+"quot;");
   }
-  function toast(msg){ var el = document.getElementById("toast"); if (!el) return; el.textContent = msg; el.classList.add("show"); setTimeout(function(){ el.classList.remove("show"); }, 2000); }
+  function toast(msg){ var el = document.getElementById("toast"); if (!el) return; el.textContent = msg; el.classList.add("show"); setTimeout(function(){ el.classList.remove("show"); }, 2200); }
   function goTab(name){ if (window.setTab) window.setTab(name); }
+
+  function isoWeekNumber(d){
+    var date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    var day = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate() + 4 - day);
+    var yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  }
 
   function renderHeader(){
     var pick = document.getElementById("menuPick");
@@ -53,7 +61,7 @@
     var now = new Date();
     var map = {1:"lunedi",2:"martedi",3:"mercoledi",4:"giovedi",5:"venerdi"};
     var dayId = map[now.getDay()];
-    var week = Math.min(3, Math.floor((now.getDate()-1)/7));
+    var week = (isoWeekNumber(now) - 1) % 4;
     var nice = now.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"});
     box.innerHTML = "<div class=hero-today><div class=kicker>"+esc(m.name)+"</div><h2>"+nice+"</h2></div>"+(dayId?mealHtml(m.weeks[week].days[dayId],week,dayId):"<div class=meal-card><p>Oggi non c e mensa.</p></div>");
   }
@@ -82,6 +90,14 @@
       state.menus.push(created); state.activeId = created.id; saveLibrary();
       toast("Creato: "+created.name); goTab("settimane"); renderAll();
     };
+    var jsonBtn = document.getElementById("btnJsonFile");
+    var jsonFile = document.getElementById("fileJson");
+    if (jsonBtn && jsonFile) jsonBtn.onclick = function(){ jsonFile.click(); };
+    if (jsonFile) jsonFile.onchange = function(e){ handleJsonFile(e.target.files[0]); };
+    var jsonApply = document.getElementById("applyJsonPaste");
+    if (jsonApply) jsonApply.onclick = function(){ applyJsonText(document.getElementById("jsonPaste").value); };
+    var copyBtn = document.getElementById("copyPrompt");
+    if (copyBtn) copyBtn.onclick = function(){ copyPromptText(); };
   }
   function renderInfo(){
     var box = document.getElementById("screen-info");
@@ -100,6 +116,24 @@
     if (pick) pick.onchange = function(){ if(pick.value){ state.activeId=pick.value; saveLibrary(); renderAll(); } };
     wireImport();
   }
+  var AI_PROMPT = "Analizza la foto di questo menu scolastico/mensa e rispondi SOLO con un oggetto JSON valido (niente testo attorno, niente markdown, niente backtick), con esattamente questa struttura:\n" +
+    "{\n" +
+    '  "name": "Nome del menu",\n' +
+    '  "period": "",\n' +
+    '  "weeks": [\n' +
+    '    {"name":"Prima settimana","days":{\n' +
+    '      "lunedi":{"primo":"","primoA":"","secondo":"","secondoA":"","contorno":"","frutta":"","merenda":"","merendaA":""},\n' +
+    '      "martedi":{"primo":"","primoA":"","secondo":"","secondoA":"","contorno":"","frutta":"","merenda":"","merendaA":""},\n' +
+    '      "mercoledi":{"primo":"","primoA":"","secondo":"","secondoA":"","contorno":"","frutta":"","merenda":"","merendaA":""},\n' +
+    '      "giovedi":{"primo":"","primoA":"","secondo":"","secondoA":"","contorno":"","frutta":"","merenda":"","merendaA":""},\n' +
+    '      "venerdi":{"primo":"","primoA":"","secondo":"","secondoA":"","contorno":"","frutta":"","merenda":"","merendaA":""}\n' +
+    '    }},\n' +
+    '    {"name":"Seconda settimana","days":{ ...stessi 5 giorni e stessi campi... }},\n' +
+    '    {"name":"Terza settimana","days":{ ...stessi 5 giorni e stessi campi... }},\n' +
+    '    {"name":"Quarta settimana","days":{ ...stessi 5 giorni e stessi campi... }}\n' +
+    "  ]\n" +
+    "}\n" +
+    "Regole: metti sempre tutte e 4 le settimane e tutti i 5 giorni (lunedi-venerdi), anche se restano vuoti. I campi primoA, secondoA, merendaA contengono solo i numeri degli allergeni separati da virgola (es. \"1,3,7\"), vuoti se non indicati sul menu. Non inventare piatti: se un giorno o una settimana non si legge, lascia i campi vuoti. Rispondi solo con il JSON, nessun commento prima o dopo.";
   function renderImporta(){
     var box = document.getElementById("screen-importa");
     if (!box) return;
@@ -110,7 +144,21 @@
       '<input id="fileCam" type="file" accept="image/*" capture="environment" hidden>' +
       '<input id="fileAny" type="file" accept="image/*,application/pdf" hidden></div>' +
       '<div id="importWork"></div>' +
-      '<button class="btn btn-ghost btn-wide" id="btnBlank">Crea menu vuoto da compilare</button>';
+      '<button class="btn btn-ghost btn-wide" id="btnBlank">Crea menu vuoto da compilare</button>' +
+      '<div class="meal-card" style="margin-top:14px">' +
+        '<h2>Importa da JSON</h2>' +
+        '<p class="status">Hai gia un JSON pronto (anche generato con un\'altra AI)? Caricalo qui.</p>' +
+        '<button class="btn btn-ghost btn-wide" id="btnJsonFile">Carica file .json</button>' +
+        '<input id="fileJson" type="file" accept=".json,application/json" hidden>' +
+        '<div class="field"><label>Oppure incolla il JSON</label><textarea id="jsonPaste" placeholder="{ ... }"></textarea></div>' +
+        '<button class="btn btn-primary btn-wide" id="applyJsonPaste">Importa JSON incollato</button>' +
+      '</div>' +
+      '<div class="meal-card" style="margin-top:14px">' +
+        '<h2>Riconoscimento debole? Usa un\'altra AI</h2>' +
+        '<p class="status">Se qui il testo non viene letto bene, apri un\'app AI che legge le immagini (es. Claude, ChatGPT, Gemini), incolla questo prompt insieme alla foto del menu, poi copia la risposta JSON e importala qui sopra.</p>' +
+        '<div class="field"><label>Prompt da copiare</label><textarea id="promptBox" readonly>'+esc(AI_PROMPT)+'</textarea></div>' +
+        '<button class="btn btn-ghost btn-wide" id="copyPrompt">Copia prompt</button>' +
+      '</div>';
   }
   function renderAll(){ renderHeader(); renderOggi(); renderSettimane(); renderImporta(); renderInfo(); bind(); }
   function openEdit(key){
@@ -134,6 +182,42 @@
   function loadScript(src){ return new Promise(function(res,rej){ var s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=function(){rej(new Error("script"));}; document.head.appendChild(s); }); }
   function setStatus(msg,pct){ var bar=document.getElementById("bar"); var st=document.getElementById("ocrStatus"); if(st) st.textContent=msg; if(bar&&pct!=null) bar.style.width=Math.max(0,Math.min(100,pct))+"%"; }
   var tessWorker=null;
+
+  // Migliora il contrasto dell'immagine prima di darla all'OCR: aiuta molto su foto scattate col telefono.
+  function preprocessImage(url){
+    return new Promise(function(resolve){
+      var img = new Image();
+      img.onload = function(){
+        try{
+          var maxDim = 2200;
+          var scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+          var w = Math.max(1, Math.round(img.naturalWidth * scale));
+          var h = Math.max(1, Math.round(img.naturalHeight * scale));
+          var c = document.createElement("canvas"); c.width = w; c.height = h;
+          var ctx = c.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+          var data = ctx.getImageData(0, 0, w, h);
+          var d = data.data, min = 255, max = 0, i;
+          for (i = 0; i < d.length; i += 4) {
+            var g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+            d[i] = d[i + 1] = d[i + 2] = g;
+            if (g < min) min = g;
+            if (g > max) max = g;
+          }
+          var range = Math.max(1, max - min);
+          for (i = 0; i < d.length; i += 4) {
+            var v = (d[i] - min) * 255 / range;
+            d[i] = d[i + 1] = d[i + 2] = v;
+          }
+          ctx.putImageData(data, 0, 0);
+          resolve(c.toDataURL("image/jpeg", 0.95));
+        }catch(e){ resolve(url); }
+      };
+      img.onerror = function(){ resolve(url); };
+      img.src = url;
+    });
+  }
+
   async function handleFile(file){
     if(!file) return;
     var work=document.getElementById("importWork");
@@ -150,21 +234,28 @@
         var vp=page.getViewport({scale:2});
         var c=document.createElement("canvas"); c.width=vp.width; c.height=vp.height;
         await page.render({canvasContext:c.getContext("2d"),viewport:vp}).promise;
-        document.getElementById("preview").innerHTML='<img alt="Anteprima" src="'+c.toDataURL("image/jpeg",0.9)+'">';
-        if(text.replace(/\s+/g,"").length<50) text=await runOcr(c.toDataURL("image/jpeg",0.92));
+        var pdfDataUrl=c.toDataURL("image/jpeg",0.9);
+        document.getElementById("preview").innerHTML='<img alt="Anteprima" src="'+pdfDataUrl+'">';
+        if(text.replace(/\s+/g,"").length<50){
+          setStatus("Testo scarso, provo il riconoscimento immagine...",30);
+          var pre=await preprocessImage(pdfDataUrl);
+          text=await runOcr(pre);
+        }
       } else {
         setStatus("Preparo la foto...",10);
         var url=URL.createObjectURL(file);
         document.getElementById("preview").innerHTML='<img alt="Anteprima" src="'+url+'">';
-        text=await runOcr(url);
+        setStatus("Miglioro il contrasto...",15);
+        var preImg=await preprocessImage(url);
+        text=await runOcr(preImg);
       }
       showReview(text);
     }catch(err){ setStatus("Errore: "+err.message); showReview(""); }
   }
   async function runOcr(url){
-    setStatus("Carico riconoscimento...",15);
+    setStatus("Carico riconoscimento...",20);
     if(!window.Tesseract) await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js");
-    if(!tessWorker) tessWorker=await Tesseract.createWorker("ita",1,{logger:function(m){ if(m.status==="recognizing text") setStatus("Riconoscimento... "+Math.round((m.progress||0)*100)+"%",20+(m.progress||0)*70); }});
+    if(!tessWorker) tessWorker=await Tesseract.createWorker("ita",1,{logger:function(m){ if(m.status==="recognizing text") setStatus("Riconoscimento... "+Math.round((m.progress||0)*100)+"%",25+(m.progress||0)*70); }});
     await tessWorker.setParameters({tessedit_pageseg_mode:"6",preserve_interword_spaces:"1",user_defined_dpi:"300"});
     var first=await tessWorker.recognize(url);
     var text=(first.data&&first.data.text)||"";
@@ -176,32 +267,77 @@
     }
     return text;
   }
+
+  // Estrae eventuali numeri di allergeni tra parentesi o dopo "all./allergeni" da un pezzo di testo.
+  function extractAllergens(dish){
+    var m = dish.match(/\(([\d\s,\/;]{1,24})\)/) || dish.match(/all(?:ergeni)?\.?\s*[:\-]?\s*([\d][\d\s,\/;]{0,20})\s*$/i);
+    if(!m) return { dish: dish.trim(), allergens: "" };
+    var nums = m[1].replace(/[^\d,]/g,",").split(",").map(function(x){return x.trim();}).filter(Boolean);
+    var allergens = nums.join(",");
+    var cleanDish = (dish.slice(0,m.index) + dish.slice(m.index+m[0].length)).replace(/\s+/g," ").trim();
+    return { dish: cleanDish, allergens: allergens };
+  }
+
+  var DAY_RE = /luned[i\u00ec]|marted[i\u00ec]|mercoled[i\u00ec]|gioved[i\u00ec]|venerd[i\u00ec]/ig;
+  var LABELS = [
+    { key:"primo", re:/\bprimo(?:\s*piatto)?\b\s*[:\-]?\s*/i, allergenKey:"primoA" },
+    { key:"secondo", re:/\bsecondo(?:\s*piatto)?\b\s*[:\-]?\s*/i, allergenKey:"secondoA" },
+    { key:"contorno", re:/\bcontorno\b\s*[:\-]?\s*/i, allergenKey:null },
+    { key:"frutta", re:/\bfrutta\b\s*[:\-]?\s*/i, allergenKey:null },
+    { key:"merenda", re:/\bmerenda\b\s*[:\-]?\s*/i, allergenKey:"merendaA" }
+  ];
+
   function parseMenuText(text){
     var weeks=[{name:"Prima settimana",days:emptyDays()},{name:"Seconda settimana",days:emptyDays()},{name:"Terza settimana",days:emptyDays()},{name:"Quarta settimana",days:emptyDays()}];
     var weekIdx=0, dayId="lunedi";
     String(text||"").split(/\n+/).forEach(function(line){
       line=line.trim(); if(!line) return;
       var low=line.toLowerCase();
-      if(/1\s*settimana|prima settimana/.test(low)) weekIdx=0;
-      if(/2\s*settimana|second/.test(low)) weekIdx=1;
-      if(/3\s*settimana|terza settimana/.test(low)) weekIdx=2;
-      if(/4\s*settimana|quarta settimana/.test(low)) weekIdx=3;
+      if(/(?:^|[^a-z])(?:1|i|prima)\s*settimana/.test(low) || /settimana\s*(?:1|i)(?:[^a-z]|$)/.test(low)) weekIdx=0;
+      if(/(?:^|[^a-z])(?:2|ii|seconda)\s*settimana/.test(low) || /settimana\s*(?:2|ii)(?:[^a-z]|$)/.test(low)) weekIdx=1;
+      if(/(?:^|[^a-z])(?:3|iii|terza)\s*settimana/.test(low) || /settimana\s*(?:3|iii)(?:[^a-z]|$)/.test(low)) weekIdx=2;
+      if(/(?:^|[^a-z])(?:4|iv|quarta)\s*settimana/.test(low) || /settimana\s*(?:4|iv)(?:[^a-z]|$)/.test(low)) weekIdx=3;
       if(/luned/.test(low)) dayId="lunedi";
       if(/marted/.test(low)) dayId="martedi";
       if(/mercoled/.test(low)) dayId="mercoledi";
       if(/gioved/.test(low)) dayId="giovedi";
       if(/venerd/.test(low)) dayId="venerdi";
       var slot=weeks[weekIdx].days[dayId]; if(!slot) return;
-      var dish=line.replace(/luned[i]|marted[i]|mercoled[i]|gioved[i]|venerd[i]|primo|secondo|contorno|frutta|merenda/ig," ").replace(/\s+/g," ").trim();
-      if(!dish||dish.length<3||/settimana|allergen|menu/i.test(dish)) return;
-      if(!slot.primo) slot.primo=dish; else if(!slot.secondo) slot.secondo=dish; else if(!slot.contorno) slot.contorno=dish; else if(!slot.frutta) slot.frutta=dish; else if(!slot.merenda) slot.merenda=dish;
+      var stripped=line.replace(DAY_RE," ").replace(/\s+/g," ").trim();
+      if(!stripped||/^settimana/i.test(stripped)||/^\d+\s*settimana/i.test(stripped)) return;
+
+      var matchedLabel=null;
+      for (var i=0;i<LABELS.length;i++){
+        if (LABELS[i].re.test(stripped)) { matchedLabel = LABELS[i]; break; }
+      }
+      if (matchedLabel){
+        var rest=stripped.replace(matchedLabel.re,"").trim();
+        var extracted=extractAllergens(rest);
+        if (extracted.dish.length>=2 && !/^menu$/i.test(extracted.dish)){
+          slot[matchedLabel.key]=extracted.dish;
+          if (matchedLabel.allergenKey && extracted.allergens) slot[matchedLabel.allergenKey]=extracted.allergens;
+        }
+        return;
+      }
+
+      // Nessuna etichetta trovata: ripulisci e usa il vecchio comportamento (riempi il primo slot libero, in ordine).
+      var dish=stripped.replace(/\bprimo(?:\s*piatto)?\b|\bsecondo(?:\s*piatto)?\b|\bcontorno\b|\bfrutta\b|\bmerenda\b/ig," ").replace(/\s+/g," ").trim();
+      if(!dish||dish.length<3||/settimana|allergen|^menu$/i.test(dish)) return;
+      var ex=extractAllergens(dish);
+      dish=ex.dish;
+      if(!dish||dish.length<3) return;
+      if(!slot.primo){ slot.primo=dish; if(ex.allergens) slot.primoA=ex.allergens; }
+      else if(!slot.secondo){ slot.secondo=dish; if(ex.allergens) slot.secondoA=ex.allergens; }
+      else if(!slot.contorno) slot.contorno=dish;
+      else if(!slot.frutta) slot.frutta=dish;
+      else if(!slot.merenda){ slot.merenda=dish; if(ex.allergens) slot.merendaA=ex.allergens; }
     });
     return weeks;
   }
   function showReview(text){
     window.__parsedWeeks=parseMenuText(text);
     document.getElementById("importWork").innerHTML +=
-      '<div class="meal-card"><h2>Testo riconosciuto</h2><p class="status">Correggi se serve, poi salva.</p>'+
+      '<div class="meal-card"><h2>Testo riconosciuto</h2><p class="status">Correggi se serve, poi salva. Se il risultato non ti convince, prova il box "Importa da JSON" qui sotto.</p>'+
       '<div class="field"><label>Nome menu</label><input id="imp-title-name" value="'+esc((document.getElementById("imp-name")&&document.getElementById("imp-name").value)||"Nuovo menu")+'"></div>'+
       '<div class="field"><label>Testo grezzo</label><textarea id="imp-raw">'+esc(text)+"</textarea></div>"+
       '<button class="btn btn-ghost btn-wide" id="reparse">Ri-analizza</button>'+
@@ -214,6 +350,68 @@
       toast("Nuovo menu: "+name); goTab("settimane"); renderAll();
     };
   }
+
+  // --- Import da JSON precompilato (manuale o generato con un'altra AI) ---
+  function normalizeMealShape(sd){
+    sd = sd || {};
+    return {
+      primo:String(sd.primo||"").trim(), primoA:String(sd.primoA||"").trim(),
+      secondo:String(sd.secondo||"").trim(), secondoA:String(sd.secondoA||"").trim(),
+      contorno:String(sd.contorno||"").trim(), frutta:String(sd.frutta||"").trim(),
+      merenda:String(sd.merenda||"").trim(), merendaA:String(sd.merendaA||"").trim()
+    };
+  }
+  function validateAndNormalizeMenuJson(obj){
+    if(!obj || typeof obj!=="object") throw new Error("il file non contiene un oggetto JSON");
+    var name=(obj.name||"Nuovo menu").toString().trim() || "Nuovo menu";
+    var period=(obj.period||"").toString().trim();
+    var srcWeeks=Array.isArray(obj.weeks)?obj.weeks:[];
+    var weekNames=["Prima settimana","Seconda settimana","Terza settimana","Quarta settimana"];
+    var weeks=weekNames.map(function(wn,i){
+      var src=srcWeeks[i]||{};
+      var srcDays=(src&&src.days)||{};
+      var days={};
+      DAYS.forEach(function(d){ days[d.id]=normalizeMealShape(srcDays[d.id]); });
+      return { name:(src.name||wn), days:days };
+    });
+    return { name:name, period:period, weeks:weeks };
+  }
+  function saveImportedMenu(norm){
+    var nameInput=document.getElementById("imp-name");
+    if(nameInput && nameInput.value.trim()) norm.name=nameInput.value.trim();
+    var created=makeMenu(norm);
+    state.menus.push(created); state.activeId=created.id; saveLibrary();
+    toast("Menu importato da JSON: "+created.name); goTab("settimane"); renderAll();
+  }
+  function applyJsonText(raw){
+    try{
+      var obj=JSON.parse(raw);
+      var norm=validateAndNormalizeMenuJson(obj);
+      saveImportedMenu(norm);
+    }catch(err){ toast("JSON non valido: "+err.message); }
+  }
+  function handleJsonFile(file){
+    if(!file) return;
+    var reader=new FileReader();
+    reader.onload=function(){ applyJsonText(String(reader.result||"")); };
+    reader.onerror=function(){ toast("Impossibile leggere il file"); };
+    reader.readAsText(file);
+  }
+  function copyPromptText(){
+    var box=document.getElementById("promptBox");
+    if(!box) return;
+    var done=function(){ toast("Prompt copiato"); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(box.value).then(done).catch(function(){ fallbackCopy(box); });
+    } else {
+      fallbackCopy(box);
+    }
+  }
+  function fallbackCopy(box){
+    try{ box.removeAttribute("readonly"); box.focus(); box.select(); document.execCommand("copy"); box.setAttribute("readonly","readonly"); toast("Prompt copiato"); }
+    catch(e){ toast("Copia manualmente il testo"); }
+  }
+
   if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(function(){});
   renderAll();
 })();
