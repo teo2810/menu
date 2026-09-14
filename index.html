@@ -10,10 +10,11 @@
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icon.svg" />
 <title>Menu</title>
+<meta name="app-build" content="v6" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
-:root{--bg:#f6efe6;--card:#fffcf7;--ink:#4a3f36;--muted:#8a7b70;--brand:#e7b6a8;--brand-2:#c9897c;--mint:#9dcec4;--line:#eadccf;--shadow:0 10px 28px rgba(120,80,50,.08);--nav-h:92px;--safe-b:env(safe-area-inset-bottom,0px)}
+:root{--bg:#f6efe6;--card:#fffcf7;--ink:#4a3f36;--muted:#8a7b70;--brand:#e7b6a8;--brand-2:#c9897c;--mint:#9dcec4;--lilac:#d4c2ea;--gold:#efd9a6;--line:#eadccf;--shadow:0 10px 28px rgba(120,80,50,.08);--nav-h:92px;--safe-b:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;height:100%}
 body{font-family:Nunito,system-ui,sans-serif;background:radial-gradient(900px 520px at 8% -8%,#f8d9ce 0,transparent 52%),radial-gradient(700px 460px at 108% 6%,#efe3c4 0,transparent 48%),radial-gradient(600px 400px at 70% 100%,#d7ece6 0,transparent 50%),var(--bg);color:var(--ink);overflow:hidden}
 .app{height:100dvh;display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative}
@@ -25,9 +26,9 @@ main{flex:1;overflow:auto;padding:8px 16px calc(var(--nav-h) + var(--safe-b) + 1
 .screen{display:none}.screen.active{display:block}
 .week-tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 14px;scrollbar-width:none}.week-tabs::-webkit-scrollbar{display:none}
 .week-tab,.day-chip,.edit-btn,.btn{border:0;font-family:inherit;font-weight:800}
-.week-tab{flex:0 0 auto;background:#fff;color:var(--muted);font-size:.8rem;padding:9px 14px;border-radius:999px;box-shadow:var(--shadow)}.week-tab.on{background:var(--brand);color:#5a4338}
+.week-tab{flex:0 0 auto;background:#fff;color:var(--muted);font-size:.8rem;padding:9px 14px;border-radius:999px;box-shadow:var(--shadow)}.week-tab.on{background:var(--lilac);color:#5a4338}
 .day-rail{display:flex;gap:8px;margin-bottom:14px}
-.day-chip{flex:1;background:#fff;border-radius:16px;padding:8px 0 7px;box-shadow:var(--shadow);color:var(--muted)}.day-chip small{display:block;font-size:.62rem}.day-chip b{font-size:.95rem}.day-chip.on{background:var(--ink);color:#fff}
+.day-chip{flex:1;background:#fff;border-radius:16px;padding:8px 0 7px;box-shadow:var(--shadow);color:var(--muted)}.day-chip small{display:block;font-size:.62rem}.day-chip b{font-size:.95rem}.day-chip.on{background:var(--mint);color:#3d5c56}
 .meal-card{background:var(--card);border-radius:22px;padding:16px;box-shadow:var(--shadow);margin-bottom:12px;border:1px solid #fff}
 .meal-card h2{margin:0 0 12px;font-family:Fraunces,serif;font-size:1.2rem;display:flex;justify-content:space-between;align-items:center}
 .edit-btn{background:#f3e4dc;color:var(--brand-2);font-size:.72rem;padding:6px 10px;border-radius:999px}
@@ -50,14 +51,14 @@ textarea,input:not(.menu-pick),select:not(.menu-pick){width:100%;font-family:inh
 textarea{min-height:140px;resize:vertical}.field{margin:10px 0}.field label{display:block;font-size:.72rem;font-weight:800;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
 .progress{height:8px;background:#f3ddd0;border-radius:99px;overflow:hidden;margin:10px 0}.progress>i{display:block;height:100%;width:0;background:var(--brand);transition:width .2s}
 .status{font-size:.8rem;font-weight:800;color:var(--muted)}
-nav.tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(8px + var(--safe-b));width:min(440px,calc(100% - 20px));height:72px;padding-top:18px;background:transparent;z-index:20;overflow:visible}
-nav.tabbar ul{list-style:none;margin:0;padding:0 8px;height:54px;display:grid;grid-template-columns:repeat(4,1fr);position:relative;--x:12.5%;background:#fffefb;border-radius:28px;box-shadow:0 12px 32px rgba(120,80,50,.12)}
-nav.tabbar ul::before{content:"";position:absolute;left:var(--x);top:-22px;width:52px;height:52px;margin-left:-26px;background:var(--brand);border-radius:50%;box-shadow:0 8px 16px rgba(201,137,124,.28),0 0 0 8px var(--bg);transition:left .45s cubic-bezier(.22,1.2,.36,1)}
+nav.tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(8px + var(--safe-b));width:min(440px,calc(100% - 20px));height:86px;padding-top:28px;background:transparent;z-index:20;overflow:visible;pointer-events:none}
+nav.tabbar ul{list-style:none;margin:0;padding:0 8px;height:58px;display:grid;grid-template-columns:repeat(4,1fr);position:relative;background:#fffefb;border-radius:30px;box-shadow:0 12px 32px rgba(120,80,50,.12);pointer-events:auto}
+nav.tabbar .blob{position:absolute;top:2px;width:56px;height:56px;margin-left:-28px;background:linear-gradient(160deg,var(--brand),var(--lilac));border-radius:50%;box-shadow:0 8px 18px rgba(201,137,124,.28),0 0 0 7px var(--bg);transition:left .45s cubic-bezier(.22,1.2,.36,1);pointer-events:none}
 nav.tabbar li{display:flex}
 nav.tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;color:#a39286;font-size:.62rem;font-weight:800;gap:2px;position:relative;z-index:1}
 nav.tabbar a .dot{width:22px;height:22px;display:grid;place-items:center;transition:transform .35s cubic-bezier(.22,1.2,.36,1)}
 nav.tabbar a .dot svg{width:20px;height:20px;fill:currentColor}
-nav.tabbar li.on a{color:var(--brand-2)}nav.tabbar li.on a .dot{transform:translateY(-20px);color:#5a4338}
+nav.tabbar li.on a{color:var(--brand-2)}nav.tabbar li.on a .dot{transform:translateY(-22px);color:#5a4338}
 .modal{position:fixed;inset:0;background:rgba(40,20,10,.45);display:none;align-items:flex-end;justify-content:center;z-index:40}.modal.open{display:flex}
 .sheet{background:#fff;width:min(480px,100%);border-radius:24px 24px 0 0;padding:16px 16px calc(20px + var(--safe-b));max-height:88dvh;overflow:auto}
 .grab{width:42px;height:4px;background:#e8d5c6;border-radius:99px;margin:0 auto 12px}
@@ -86,6 +87,7 @@ nav.tabbar li.on a{color:var(--brand-2)}nav.tabbar li.on a .dot{transform:transl
     <section id="screen-info" class="screen"></section>
   </main>
   <nav class="tabbar" aria-label="Navigazione">
+    <div class="blob" id="tabBlob"></div>
     <ul id="tabList">
       <li class="on" data-tab="oggi"><a href="#oggi"><span class="dot"><svg viewBox="0 0 24 24"><path d="M4 19h16v2H4v-2zm2-7h2v6H6v-6zm5 0h2v6h-2v-6zm5 0h2v6h-2v-6zM5 8l7-5 7 5v2H5V8z"/></svg></span>Oggi</a></li>
       <li data-tab="settimane"><a href="#settimane"><span class="dot"><svg viewBox="0 0 24 24"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2zm11 8H6v10h12V10zM8 12h2v2H8v-2zm4 0h2v2h-2v-2z"/></svg></span>Settimane</a></li>
@@ -112,6 +114,6 @@ nav.tabbar li.on a{color:var(--brand-2)}nav.tabbar li.on a .dot{transform:transl
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
