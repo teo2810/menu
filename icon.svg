@@ -1,10 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="118" fill="#E85D4C"/>
-  <g fill="#FFF6EC">
-    <rect x="148" y="108" width="20" height="148" rx="10"/>
-    <rect x="178" y="108" width="20" height="112" rx="10"/>
-    <rect x="208" y="108" width="20" height="148" rx="10"/>
-    <rect x="168" y="236" width="40" height="168" rx="16"/>
-    <path d="M318 112c22 0 40 14 40 48v168c0 18-10 30-24 34v138c0 12-8 20-16 20s-16-8-16-20V362c-14-4-24-16-24-34V160c0-34 18-48 40-48z"/>
-  </g>
+  <defs>
+    <linearGradient id="bg" x1="40" y1="40" x2="470" y2="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F6B8A8"/>
+      <stop offset=".45" stop-color="#E4B7E8"/>
+      <stop offset="1" stop-color="#B7A6F0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="114" fill="url(#bg)"/>
+  <ellipse cx="256" cy="268" rx="168" ry="168" fill="#F4E6C8" stroke="#3D2C24" stroke-width="18"/>
+  <ellipse cx="256" cy="268" rx="118" ry="118" fill="#FBF1D8" stroke="#3D2C24" stroke-width="10"/>
+  <ellipse cx="318" cy="300" rx="18" ry="10" fill="#7CB36A" transform="rotate(-28 318 300)"/>
+  <path d="M188 118c6 42 8 92 6 138 18-8 30-8 46 2-4-48-6-96 2-148-18 4-36 6-54 8z" fill="#E8EEF4" stroke="#3D2C24" stroke-width="14" stroke-linejoin="round"/>
+  <rect x="176" y="246" width="28" height="168" rx="14" fill="#E37A3A" stroke="#3D2C24" stroke-width="14"/>
+  <path d="M292 132c28 8 48 48 44 102-18 6-32 2-46-10 6-30 4-62-4-92 2 0 4 0 6 0z" fill="#E8EEF4" stroke="#3D2C24" stroke-width="14" stroke-linejoin="round"/>
+  <rect x="286" y="228" width="28" height="186" rx="14" fill="#E6B84A" stroke="#3D2C24" stroke-width="14"/>
 </svg>
