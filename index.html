@@ -8,10 +8,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Menu" />
 <link rel="manifest" href="manifest.json" />
-<link rel="icon" href="icon-v16-192.png" />
-<link rel="apple-touch-icon" href="icon-v16-192.png" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="v16" />
+<meta name="app-build" content="v0" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -47,24 +47,9 @@ body {
   color:var(--ink); overflow:hidden;
 }
 .app { height:100dvh; display:flex; flex-direction:column; max-width:480px; margin:0 auto; position:relative; overflow:visible; }
-.top-scrim {
-  position:fixed; left:0; right:0; top:0; z-index:25; pointer-events:none;
-  height:calc(env(safe-area-inset-top,0px) + 28px);
-  background:linear-gradient(to bottom,#f3eef8 55%,rgba(243,238,248,.55) 80%,transparent);
-}
-.nav-scrim {
-  position:fixed; left:0; right:0; bottom:0; z-index:25; pointer-events:none;
-  height:calc(var(--nav-h) + var(--safe-b) + 36px);
-  background:linear-gradient(to top,#efe8f6 18%,rgba(243,238,248,.88) 46%,rgba(243,238,248,.4) 72%,transparent);
-  -webkit-backdrop-filter:blur(16px);
-  backdrop-filter:blur(16px);
-  -webkit-mask-image:linear-gradient(to top,#000 58%,transparent);
-  mask-image:linear-gradient(to top,#000 58%,transparent);
-}
 header.top {
   padding:calc(12px + env(safe-area-inset-top,0px)) 18px 10px;
   display:flex; align-items:flex-end; justify-content:space-between; gap:12px;
-  position:relative; z-index:26;
 }
 .brand-block h1 { font-family:Fraunces,serif; font-size:1.35rem; margin:0; letter-spacing:-.02em; }
 .menu-pick {
@@ -172,9 +157,7 @@ nav.tabbar ul {
   list-style:none; margin:0; padding:0;
   position:absolute; left:0; right:0; bottom:0; height:64px;
   display:grid; grid-template-columns:repeat(4,1fr);
-  background:rgba(255,251,254,.86);
-  -webkit-backdrop-filter:blur(18px);
-  backdrop-filter:blur(18px);
+  background:var(--bar);
   border-radius:32px;
   box-shadow:0 14px 34px rgba(120,90,150,.14);
   pointer-events:auto; overflow:visible;
@@ -219,6 +202,7 @@ nav.tabbar li.on a .dot {
   top:-28px;
   width:56px; height:56px;
   margin-left:-28px;
+  z-index:4;
 }
 nav.tabbar li.on a .dot img {
   width:36px; height:36px;
@@ -247,8 +231,6 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
 </style>
 </head>
 <body>
-<div class="top-scrim"></div>
-<div class="nav-scrim"></div>
 <div class="app">
   <header class="top">
     <div class="brand-block">
@@ -350,6 +332,6 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
   window.setTab("oggi");
 })();
 </script>
-<script src="app.js?v=16"></script>
+<script src="app.js?v=0"></script>
 </body>
 </html>

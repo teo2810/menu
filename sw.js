@@ -1,7 +1,7 @@
-const CACHE = "menu-app-v16";
+const CACHE = "menu-app-v0";
 const ASSETS = [
   "./index.html", "./app.js", "./manifest.json",
-  "./icon-v16-192.png", "./icon-v16-512.png",
+  "./icon-192.png", "./icon-512.png",
   "./icons/primo.png", "./icons/secondo.png", "./icons/contorno.png",
   "./icons/frutta.png", "./icons/merenda.png",
   "./icons/tab-oggi.png", "./icons/tab-settimane.png",
