@@ -11,7 +11,7 @@
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="v0" />
+<meta name="app-build" content="v1" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -57,7 +57,20 @@ header.top {
   margin:4px 0 0; padding:4px 22px 4px 0; border:0; max-width:230px;
   background:transparent url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%237a6a8c' d='M1 1l5 5 5-5'/></svg>") no-repeat right center;
   font-family:inherit; font-size:.82rem; font-weight:800; color:var(--ink); cursor:pointer;
+  text-align:left; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
+.pick-row {
+  width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:#fff; border:0; border-radius:16px; padding:14px 14px; margin:0 0 8px;
+  box-shadow:var(--shadow); font-family:inherit; font-weight:800; color:var(--ink); text-align:left;
+}
+.pick-row.on { background:#eadcf9; }
+.pick-dot {
+  width:18px; height:18px; border-radius:50%; flex-shrink:0;
+  border:2px solid #cbb8e4; background:#fff;
+}
+.pick-row.on .pick-dot { border-color:#6f5f8a; background:#6f5f8a; box-shadow:inset 0 0 0 3px #eadcf9; }
+.ask-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
 .pill {
   background:#fff; border:1px solid var(--line); border-radius:999px;
   padding:6px 10px; font-size:.72rem; font-weight:800; color:var(--brand-2);
@@ -235,7 +248,7 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
   <header class="top">
     <div class="brand-block">
       <h1>Menu</h1>
-      <select id="menuPick" class="menu-pick" aria-label="Scegli menu"></select>
+      <button type="button" id="menuPick" class="menu-pick" aria-label="Scegli menu">Aggiungi un menu</button>
     </div>
     <div class="pill" id="periodPill">Nessun periodo</div>
   </header>
@@ -278,6 +291,25 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
     <div class="field"><label>Allergeni merenda</label><input id="f-merendaA" /></div>
     <button class="btn btn-primary btn-wide" id="saveEdit">Salva correzioni</button>
     <button class="btn btn-ghost btn-wide" id="closeEdit">Annulla</button>
+  </div>
+</div>
+<div class="modal" id="pickModal">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3 style="margin:0 0 12px;font-family:Fraunces,serif">Scegli menu</h3>
+    <div id="pickList"></div>
+    <button class="btn btn-ghost btn-wide" id="closePick">Chiudi</button>
+  </div>
+</div>
+<div class="modal" id="askModal">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3 id="askTitle" style="margin:0 0 8px;font-family:Fraunces,serif">Eliminare?</h3>
+    <p class="status" id="askText">Il menu verra rimosso da questo telefono.</p>
+    <div class="ask-actions">
+      <button class="btn btn-ghost" id="askNo">Annulla</button>
+      <button class="btn btn-primary" id="askOk">Elimina</button>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -332,6 +364,6 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
   window.setTab("oggi");
 })();
 </script>
-<script src="app.js?v=0"></script>
+<script src="app.js?v=1"></script>
 </body>
 </html>

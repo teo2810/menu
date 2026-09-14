@@ -31,6 +31,33 @@
   }
   function toast(msg){ var el = document.getElementById("toast"); if (!el) return; el.textContent = msg; el.classList.add("show"); setTimeout(function(){ el.classList.remove("show"); }, 2200); }
   function goTab(name){ if (window.setTab) window.setTab(name); }
+  function openModal(id){ var el = document.getElementById(id); if (el) el.classList.add("open"); }
+  function closeModal(id){ var el = document.getElementById(id); if (el) el.classList.remove("open"); }
+  var askCb = null;
+  function ask(title, text, okLabel, cb){
+    document.getElementById("askTitle").textContent = title;
+    document.getElementById("askText").textContent = text;
+    document.getElementById("askOk").textContent = okLabel || "Ok";
+    askCb = cb;
+    openModal("askModal");
+  }
+  function renderPickList(){
+    var box = document.getElementById("pickList");
+    if (!box) return;
+    if (!state.menus.length) { box.innerHTML = "<p class=status>Nessun menu salvato.</p>"; return; }
+    box.innerHTML = state.menus.map(function(item){
+      var on = item.id === state.activeId ? " on" : "";
+      return "<button type=button class='pick-row"+on+"' data-pick="+JSON.stringify(item.id)+"><span>"+esc(item.name)+"</span><span class=pick-dot></span></button>";
+    }).join("");
+    box.querySelectorAll("[data-pick]").forEach(function(b){
+      b.onclick = function(){
+        state.activeId = b.getAttribute("data-pick");
+        saveLibrary();
+        closeModal("pickModal");
+        renderAll();
+      };
+    });
+  }
 
   var ICONS = {
     primo:   '<img src="icons/primo.png" alt="" width="36" height="36">',
@@ -71,10 +98,13 @@
   function renderHeader(){
     var pick = document.getElementById("menuPick");
     if (!pick) return;
-    if (!state.menus.length) { pick.innerHTML = "<option>Aggiungi un menu</option>"; pick.disabled = true; document.getElementById("periodPill").textContent = "Vuoto"; return; }
-    pick.disabled = false;
-    pick.innerHTML = state.menus.map(function(item){ return "<option value="+JSON.stringify(item.id)+(item.id===state.activeId?" selected":"")+">"+esc(item.name)+"</option>"; }).join("");
     var m = currentMenu();
+    if (!state.menus.length) {
+      pick.textContent = "Aggiungi un menu";
+      document.getElementById("periodPill").textContent = "Vuoto";
+      return;
+    }
+    pick.textContent = m ? m.name : "Scegli menu";
     document.getElementById("periodPill").textContent = (m && (m.period || m.name)) || "Senza periodo";
   }
   function mealHtml(d, weekIdx, dayId){
@@ -121,7 +151,7 @@
     var blank = document.getElementById("btnBlank");
     if (blank) blank.onclick = function(){
       var el = document.getElementById("imp-name");
-      var name = ((el && el.value.trim()) || prompt("Nome del menu") || "Nuovo menu").trim();
+      var name = ((el && el.value.trim()) || "Nuovo menu").trim();
       var created = makeMenu({ name:name });
       state.menus.push(created); state.activeId = created.id; saveLibrary();
       toast("Creato: "+created.name); goTab("settimane"); renderAll();
@@ -153,9 +183,33 @@
     document.querySelectorAll("[data-week]").forEach(function(b){ b.onclick = function(){ state.week=+b.getAttribute("data-week"); renderSettimane(); bind(); }; });
     document.querySelectorAll("[data-day]").forEach(function(b){ b.onclick = function(){ state.day=b.getAttribute("data-day"); renderSettimane(); bind(); }; });
     document.querySelectorAll("[data-use]").forEach(function(b){ b.onclick = function(){ state.activeId=b.getAttribute("data-use"); saveLibrary(); renderAll(); }; });
-    document.querySelectorAll("[data-del]").forEach(function(b){ b.onclick = function(){ if(!confirm("Eliminare?"))return; state.menus=state.menus.filter(function(x){return x.id!==b.getAttribute("data-del");}); state.activeId=state.menus[0]&&state.menus[0].id; saveLibrary(); renderAll(); }; });
+    document.querySelectorAll("[data-del]").forEach(function(b){
+      b.onclick = function(){
+        var id = b.getAttribute("data-del");
+        ask("Eliminare questo menu?", "Verra rimosso solo da questo telefono.", "Elimina", function(){
+          state.menus = state.menus.filter(function(x){ return x.id !== id; });
+          state.activeId = state.menus[0] && state.menus[0].id;
+          saveLibrary();
+          renderAll();
+        });
+      };
+    });
     var pick = document.getElementById("menuPick");
-    if (pick) pick.onchange = function(){ if(pick.value){ state.activeId=pick.value; saveLibrary(); renderAll(); } };
+    if (pick) pick.onclick = function(){
+      if (!state.menus.length) { goTab("importa"); return; }
+      renderPickList();
+      openModal("pickModal");
+    };
+    var closePick = document.getElementById("closePick");
+    if (closePick) closePick.onclick = function(){ closeModal("pickModal"); };
+    var pickModal = document.getElementById("pickModal");
+    if (pickModal) pickModal.onclick = function(e){ if (e.target === pickModal) closeModal("pickModal"); };
+    var askNo = document.getElementById("askNo");
+    var askOk = document.getElementById("askOk");
+    var askModal = document.getElementById("askModal");
+    if (askNo) askNo.onclick = function(){ closeModal("askModal"); askCb = null; };
+    if (askOk) askOk.onclick = function(){ var fn = askCb; askCb = null; closeModal("askModal"); if (fn) fn(); };
+    if (askModal) askModal.onclick = function(e){ if (e.target === askModal) { closeModal("askModal"); askCb = null; } };
     wireImport();
   }
   var AI_PROMPT = "Analizza la foto di questo menu scolastico/mensa e rispondi SOLO con un oggetto JSON valido (niente testo attorno, niente markdown, niente backtick), con esattamente questa struttura:\n" +
