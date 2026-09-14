@@ -1,5 +1,12 @@
-const CACHE = "menu-app-v11";
-const ASSETS = ["./index.html", "./app.js", "./manifest.json", "./icon.svg"];
+const CACHE = "menu-app-v12";
+const ASSETS = [
+  "./index.html", "./app.js", "./manifest.json",
+  "./icon-192.png", "./icon-512.png",
+  "./icons/primo.png", "./icons/secondo.png", "./icons/contorno.png",
+  "./icons/frutta.png", "./icons/merenda.png",
+  "./icons/tab-oggi.png", "./icons/tab-settimane.png",
+  "./icons/tab-importa.png", "./icons/tab-menu.png"
+];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
   self.skipWaiting();

@@ -8,10 +8,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Menu" />
 <link rel="manifest" href="manifest.json" />
-<link rel="icon" href="icon.svg" />
-<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="v11" />
+<meta name="app-build" content="v12" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -100,7 +100,7 @@ main { flex:1; overflow:auto; padding:6px 16px calc(var(--nav-h) + var(--safe-b)
 .ico.svg-contorno { background:#c8ebd8; }
 .ico.svg-frutta { background:#f6e6a8; }
 .ico.svg-merenda { background:#c5e4f5; }
-.ico svg { width:30px; height:30px; overflow:visible; }
+.ico img { width:36px; height:36px; object-fit:contain; display:block; }
 .course .label { font-size:.62rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); font-weight:800; }
 .course .dish { font-weight:800; line-height:1.22; font-size:.92rem; }
 .tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
@@ -180,8 +180,8 @@ nav.tabbar a {
   padding-bottom:10px; text-decoration:none; color:#8b8296; font-size:.66rem; font-weight:800;
   gap:2px; position:relative; z-index:3;
 }
-nav.tabbar a .dot { width:24px; height:24px; display:grid; place-items:center; transition:transform .35s cubic-bezier(.22,1.2,.36,1); }
-nav.tabbar a .dot svg { width:20px; height:20px; fill:currentColor; }
+nav.tabbar a .dot { width:30px; height:30px; display:grid; place-items:center; transition:transform .35s cubic-bezier(.22,1.2,.36,1); }
+nav.tabbar a .dot img { width:28px; height:28px; object-fit:contain; display:block; }
 nav.tabbar li.on a { color:#1f1a2e; }
 nav.tabbar li.on a .dot { transform:translateY(-34px); color:var(--blob-ink,#4a3a68); }
 .modal { position:fixed; inset:0; background:rgba(50,30,60,.42); display:none; align-items:flex-end; justify-content:center; z-index:40; }
@@ -223,10 +223,10 @@ nav.tabbar li.on a .dot { transform:translateY(-34px); color:var(--blob-ink,#4a3
     <div class="tab-stage" id="tabStage">
       <div class="blob" id="tabBlob"></div>
       <ul id="tabList">
-        <li class="on" data-tab="oggi"><a href="#oggi"><span class="dot"><svg viewBox="0 0 24 24"><path d="M7 3h2v2h6V3h2v2h3v16H4V5h3V3zm12 8H5v10h14V11zM8 14h3v3H8v-3z"/></svg></span>Oggi</a></li>
-        <li data-tab="settimane"><a href="#settimane"><span class="dot"><svg viewBox="0 0 24 24"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2zm12 8H5v10h14V10zM7 12h2.2v2.2H7V12zm4 0h2.2v2.2H11V12zm4 0H17v2.2h-2V12zM7 16h2.2v2.2H7V16zm4 0h2.2v2.2H11V16z"/></svg></span>Settimane</a></li>
-        <li data-tab="importa"><a href="#importa"><span class="dot"><svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6V2zm9 1.2V8h4.6M12 10.5v7M12 17.5l-2.4-2.4M12 17.5l2.4-2.4"/></svg></span>Importa</a></li>
-        <li data-tab="info"><a href="#info"><span class="dot"><svg viewBox="0 0 24 24"><path d="M8 5h12v13H8V5z"/><path d="M4 8h12v13H4V8z" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>Menu</a></li>
+        <li class="on" data-tab="oggi"><a href="#oggi"><span class="dot"><img src="icons/tab-oggi.png" alt=""></span>Oggi</a></li>
+        <li data-tab="settimane"><a href="#settimane"><span class="dot"><img src="icons/tab-settimane.png" alt=""></span>Settimane</a></li>
+        <li data-tab="importa"><a href="#importa"><span class="dot"><img src="icons/tab-importa.png" alt=""></span>Importa</a></li>
+        <li data-tab="info"><a href="#info"><span class="dot"><img src="icons/tab-menu.png" alt=""></span>Menu</a></li>
       </ul>
     </div>
   </nav>
@@ -295,6 +295,6 @@ nav.tabbar li.on a .dot { transform:translateY(-34px); color:var(--blob-ink,#4a3
   window.setTab("oggi");
 })();
 </script>
-<script src="app.js?v=11"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>
