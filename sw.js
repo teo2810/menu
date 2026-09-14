@@ -1,4 +1,4 @@
-const CACHE = "menu-app-v14";
+const CACHE = "menu-app-v15";
 const ASSETS = [
   "./index.html", "./app.js", "./manifest.json",
   "./icon-192.png", "./icon-512.png",
