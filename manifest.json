@@ -1,0 +1,14 @@
+{
+  "name": "Menu",
+  "short_name": "Menu",
+  "description": "Importa menù da foto o file, dai un nome, consulta e correggi",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FFF3E8",
+  "theme_color": "#E85D4C",
+  "lang": "it",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
