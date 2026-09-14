@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icon.svg" />
 <title>Menu</title>
-<meta name="app-build" content="v9" />
+<meta name="app-build" content="v10" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -62,7 +62,7 @@ header.top {
   padding:6px 10px; font-size:.72rem; font-weight:800; color:var(--brand-2);
   box-shadow:var(--shadow); white-space:nowrap;
 }
-main { flex:1; overflow:auto; padding:8px 16px calc(var(--nav-h) + var(--safe-b) + 8px); }
+main { flex:1; overflow:auto; padding:6px 16px calc(var(--nav-h) + var(--safe-b) + 18px); }
 .screen { display:none; animation:rise .35s ease; }
 .screen.active { display:block; }
 @keyframes rise { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:none;} }
@@ -83,33 +83,33 @@ main { flex:1; overflow:auto; padding:8px 16px calc(var(--nav-h) + var(--safe-b)
 .day-chip b { font-size:.95rem; }
 .day-chip.on { background:var(--mint); color:#2f5b50; }
 .meal-card {
-  background:var(--card); border-radius:22px; padding:16px;
-  box-shadow:var(--shadow); margin-bottom:12px; border:1px solid #fff;
+  background:var(--card); border-radius:22px; padding:14px 16px 12px;
+  box-shadow:var(--shadow); margin-bottom:10px; border:1px solid #fff;
 }
 .meal-card h2 {
-  margin:0 0 12px; font-family:Fraunces,serif; font-size:1.2rem;
+  margin:0 0 6px; font-family:Fraunces,serif; font-size:1.12rem;
   display:flex; justify-content:space-between; align-items:center;
 }
 .edit-btn { background:#f3e8fb; color:var(--brand-2); font-size:.72rem; padding:6px 10px; border-radius:999px; }
-.course { display:grid; grid-template-columns:44px 1fr; gap:10px; padding:10px 0; border-top:1px dashed var(--line); }
+.course { display:grid; grid-template-columns:36px 1fr; gap:10px; padding:7px 0; border-top:1px dashed var(--line); align-items:center; }
 .course:first-of-type { border-top:0; }
-.ico { width:44px; height:44px; border-radius:14px; display:grid; place-items:center; }
+.ico { width:36px; height:36px; border-radius:11px; display:grid; place-items:center; flex-shrink:0; }
 .ico.svg-primo { background:#f3e8fb; color:#6f5f8a; }
 .ico.svg-secondo { background:#fde3ea; color:#8a4a62; }
 .ico.svg-contorno { background:#d9f3ea; color:#2f5b50; }
 .ico.svg-frutta { background:#fbe9c8; color:#7a5a20; }
 .ico.svg-merenda { background:#dceafb; color:#3a5878; }
-.ico svg { width:22px; height:22px; }
-.course .label { font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:800; }
-.course .dish { font-weight:800; line-height:1.25; }
+.ico svg { width:18px; height:18px; }
+.course .label { font-size:.62rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); font-weight:800; }
+.course .dish { font-weight:800; line-height:1.22; font-size:.92rem; }
 .tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .tag { font-size:.65rem; font-weight:800; background:#f3e8fb; color:var(--brand-2); border-radius:999px; padding:2px 7px; }
 .hero-today {
   background:linear-gradient(135deg,#e8d7f8 0%, #c9def6 48%, #b7e2d4 100%);
-  color:#3d3554; border-radius:24px; padding:18px; margin-bottom:14px; box-shadow:var(--shadow);
+  color:#3d3554; border-radius:22px; padding:14px 16px; margin-bottom:10px; box-shadow:var(--shadow);
 }
-.hero-today .kicker { opacity:.8; font-weight:800; font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; }
-.hero-today h2 { font-family:Fraunces,serif; margin:6px 0 2px; font-size:1.6rem; }
+.hero-today .kicker { opacity:.8; font-weight:800; font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; }
+.hero-today h2 { font-family:Fraunces,serif; margin:4px 0 0; font-size:1.32rem; }
 .hero-today p { margin:0; opacity:.9; font-weight:700; }
 .note { background:#fff; border-radius:16px; padding:12px 14px; color:var(--muted); font-size:.82rem; font-weight:700; line-height:1.4; margin-top:8px; }
 .allergen-list { display:grid; gap:8px; }
@@ -155,17 +155,24 @@ nav.tabbar ul {
 nav.tabbar .blob {
   position:absolute; top:6px; left:12.5%;
   width:58px; height:58px; margin-left:-29px;
-  background:linear-gradient(160deg,#5b4d86 0%, #3f6d64 100%);
-  border-radius:50%; box-shadow:0 10px 18px rgba(50,40,80,.35);
+  background:var(--blob-bg,#d9c7f2);
+  border-radius:60% 58% 55% 60%/58% 60% 55% 60%;
+  box-shadow:0 10px 18px -3px rgba(60,40,90,.32), inset 0 6px 10px rgba(255,255,255,.4);
   z-index:2; pointer-events:none;
-  transition:left .45s cubic-bezier(.22,1.2,.36,1);
+  transition:left .5s cubic-bezier(.3,1.4,.4,1), background-color .45s ease;
+  animation:blobWobble 6.5s ease-in-out infinite;
 }
-nav.tabbar .blob::before,
-nav.tabbar .blob::after {
-  content:""; position:absolute; width:18px; height:18px; bottom:4px; background:transparent;
+nav.tabbar .blob.jump { animation:blobWobble 6.5s ease-in-out infinite, blobSquash .5s cubic-bezier(.3,1.4,.4,1); }
+@keyframes blobWobble {
+  0%,100% { border-radius:60% 58% 55% 60%/58% 60% 55% 60%; }
+  50% { border-radius:56% 62% 60% 55%/55% 58% 62% 58%; }
 }
-nav.tabbar .blob::before { left:-16px; border-top-right-radius:18px; box-shadow:5px -1px 0 0 var(--bar); }
-nav.tabbar .blob::after { right:-16px; border-top-left-radius:18px; box-shadow:-5px -1px 0 0 var(--bar); }
+@keyframes blobSquash {
+  0% { transform:scaleX(1) scaleY(1); }
+  38% { transform:scaleX(1.2) scaleY(.82); }
+  68% { transform:scaleX(.92) scaleY(1.06); }
+  100% { transform:scaleX(1) scaleY(1); }
+}
 nav.tabbar li { display:flex; }
 nav.tabbar a {
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
@@ -175,7 +182,7 @@ nav.tabbar a {
 nav.tabbar a .dot { width:24px; height:24px; display:grid; place-items:center; transition:transform .35s cubic-bezier(.22,1.2,.36,1); }
 nav.tabbar a .dot svg { width:20px; height:20px; fill:currentColor; }
 nav.tabbar li.on a { color:#1f1a2e; }
-nav.tabbar li.on a .dot { transform:translateY(-34px); color:#fff; }
+nav.tabbar li.on a .dot { transform:translateY(-34px); color:var(--blob-ink,#4a3a68); }
 .modal { position:fixed; inset:0; background:rgba(50,30,60,.42); display:none; align-items:flex-end; justify-content:center; z-index:40; }
 .modal.open { display:flex; }
 .sheet { background:#fff; width:min(480px,100%); border-radius:24px 24px 0 0; padding:16px 16px calc(20px + var(--safe-b)); max-height:88dvh; overflow:auto; }
@@ -244,6 +251,12 @@ nav.tabbar li.on a .dot { transform:translateY(-34px); color:#fff; }
 <script>
 (function(){
   var list = document.getElementById("tabList");
+  var TAB_THEME = {
+    oggi:      { bg:"#eadcf9", ink:"#4a3a68" },
+    settimane: { bg:"#cdeee1", ink:"#1f5245" },
+    importa:   { bg:"#fbe0d2", ink:"#7a4326" },
+    info:      { bg:"#d3e6fa", ink:"#28466b" }
+  };
   function place(){
     var on = list.querySelector("li.on");
     var blob = document.getElementById("tabBlob");
@@ -256,6 +269,16 @@ nav.tabbar li.on a .dot { transform:translateY(-34px); color:#fff; }
   window.setTab = function(name){
     document.querySelectorAll(".screen").forEach(function(el){ el.classList.toggle("active", el.id === "screen-" + name); });
     Array.prototype.forEach.call(list.children, function(li){ li.classList.toggle("on", li.dataset.tab === name); });
+    var stage = document.getElementById("tabStage");
+    var blob = document.getElementById("tabBlob");
+    var theme = TAB_THEME[name] || TAB_THEME.oggi;
+    if (stage) { stage.style.setProperty("--blob-bg", theme.bg); stage.style.setProperty("--blob-ink", theme.ink); }
+    if (blob) {
+      blob.classList.remove("jump");
+      void blob.offsetWidth;
+      blob.classList.add("jump");
+      setTimeout(function(){ blob.classList.remove("jump"); }, 520);
+    }
     requestAnimationFrame(place);
   };
   list.addEventListener("click", function(e){
@@ -271,6 +294,6 @@ nav.tabbar li.on a .dot { transform:translateY(-34px); color:#fff; }
   window.setTab("oggi");
 })();
 </script>
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

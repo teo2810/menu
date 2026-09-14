@@ -32,6 +32,14 @@
   function toast(msg){ var el = document.getElementById("toast"); if (!el) return; el.textContent = msg; el.classList.add("show"); setTimeout(function(){ el.classList.remove("show"); }, 2200); }
   function goTab(name){ if (window.setTab) window.setTab(name); }
 
+  var ICONS = {
+    primo: '<svg viewBox="0 0 24 24"><path d="M3 11h18a9 9 0 01-18 0z"/><path d="M5 21h14v-2H5z"/><path d="M10.6 3c-.6.7-.6 1.5 0 2.2s.6 1.5 0 2.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14.6 3c-.6.7-.6 1.5 0 2.2s.6 1.5 0 2.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    secondo: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="13" r="3"/></svg>',
+    contorno: '<svg viewBox="0 0 24 24"><path d="M20 4C10 4 4 10 4.2 19.6 13.7 19.3 20 13 20 4z"/><path d="M6.5 17.5C10 14 14.5 9.5 18 5.5" fill="none" stroke="#fffdfb" stroke-width="1.3" stroke-linecap="round"/></svg>',
+    frutta: '<svg viewBox="0 0 24 24"><path d="M12 8.3c-3.2 0-5.7 2.5-5.7 6.3 0 3.9 2.3 6.1 4.7 6.1.6 0 1-.2 1.5-.4.5.2.9.4 1.5.4 2.4 0 4.7-2.2 4.7-6.1 0-3.8-2.5-6.3-5.6-6.3-.4 0-.7.1-1.1.2.4-.1.7-.2 1.1-.2z"/><path d="M12 8.3c0-1.6.8-2.8 2.1-3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    merenda: '<svg viewBox="0 0 24 24"><path d="M12 3.2 20.5 11H3.5z"/><path d="M4.3 12h15.4l-1.1 6.2a2.8 2.8 0 01-2.8 2.3H8.2a2.8 2.8 0 01-2.8-2.3z"/></svg>'
+  };
+
   function isoWeekNumber(d){
     var date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     var day = date.getUTCDay() || 7;
@@ -50,8 +58,13 @@
     document.getElementById("periodPill").textContent = (m && (m.period || m.name)) || "Senza periodo";
   }
   function mealHtml(d, weekIdx, dayId){
-    var rows = [["Primo",d.primo],["Secondo",d.secondo],["Contorno",d.contorno],["Frutta",d.frutta],["Merenda",d.merenda]].filter(function(x){ return x[1]; });
-    var body = rows.length ? rows.map(function(x){ return "<div class=course><div><div class=label>"+x[0]+"</div><div class=dish>"+esc(x[1])+"</div></div></div>"; }).join("") : "<p class=status>Giorno vuoto. Tocca Correggi.</p>";
+    var rows = [
+      ["primo","Primo",d.primo],["secondo","Secondo",d.secondo],["contorno","Contorno",d.contorno],
+      ["frutta","Frutta",d.frutta],["merenda","Merenda",d.merenda]
+    ].filter(function(x){ return x[2]; });
+    var body = rows.length ? rows.map(function(x){
+      return "<div class=course><div class='ico svg-"+x[0]+"'>"+ICONS[x[0]]+"</div><div><div class=label>"+x[1]+"</div><div class=dish>"+esc(x[2])+"</div></div></div>";
+    }).join("") : "<p class=status>Giorno vuoto. Tocca Correggi.</p>";
     return "<article class=meal-card><h2>"+DAYS.find(function(x){return x.id===dayId;}).label+" <button class=edit-btn data-edit="+weekIdx+":"+dayId+">Correggi</button></h2>"+body+"</article>";
   }
   function renderOggi(){
