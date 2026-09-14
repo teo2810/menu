@@ -1,4 +1,4 @@
-const CACHE = "menu-app-v3";
+const CACHE = "menu-app-v4";
 const ASSETS = ["./index.html", "./app.js", "./manifest.json", "./icon.svg"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -10,14 +10,11 @@ self.addEventListener("activate", (e) => {
 });
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
-  e.respondWith(caches.match(e.request).then((cached) => {
-    const net = fetch(e.request).then((res) => {
-      if (res.ok && e.request.url.startsWith(self.location.origin)) {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy));
-      }
-      return res;
-    }).catch(() => cached);
-    return cached || net;
-  }));
+  e.respondWith(fetch(e.request).then((res) => {
+    if (res.ok && e.request.url.startsWith(self.location.origin)) {
+      const copy = res.clone();
+      caches.open(CACHE).then((c) => c.put(e.request, copy));
+    }
+    return res;
+  }).catch(() => caches.match(e.request)));
 });
