@@ -313,11 +313,21 @@ textarea { min-height:140px; resize:vertical; }
 }
 .prompt-ph { flex:1; font-size:.78rem; font-weight:800; color:var(--muted); text-align:left; }
 .prompt-row .btn { margin:0; padding:10px 16px; width:auto; }
-.week-grid { overflow-x:auto; margin:8px 0 4px; -webkit-overflow-scrolling:touch; }
-.week-grid table { width:100%; border-collapse:separate; border-spacing:4px; table-layout:fixed; min-width:360px; }
-.week-grid th { font-size:.58rem; font-weight:800; color:var(--muted); text-align:left; padding:0 2px; letter-spacing:.04em; text-transform:uppercase; }
-.week-grid td { padding:0; vertical-align:top; width:18%; }
-.week-grid th.day { width:28px; color:var(--ink); padding-top:8px; }
+.week-grid { overflow:hidden; margin:8px 0 4px; width:100%; }
+.week-grid table { width:100%; border-collapse:separate; border-spacing:2px; table-layout:fixed; min-width:0; }
+.week-grid th { font-size:clamp(.42rem,2.6vw,.58rem); font-weight:800; color:var(--muted); text-align:center; padding:0; letter-spacing:0; text-transform:uppercase; line-height:1.1; white-space:nowrap; overflow:hidden; }
+.week-grid td { padding:0; vertical-align:top; }
+.week-grid th.day { width:22px; color:var(--ink); text-align:left; padding-top:8px; font-size:.58rem; }
+.edit-course { background:#faf8fc; border-radius:16px; padding:10px; margin:0 0 10px; text-align:left; }
+.edit-course label { display:block; font-size:.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+.edit-course .label { margin:8px 0 6px; font-size:.62rem; }
+.edit-course input { margin:0; }
+.alg-chips { display:flex; flex-wrap:wrap; gap:5px; }
+.alg-chip {
+  border:0; border-radius:999px; padding:5px 8px; font-size:.62rem; font-weight:800;
+  background:var(--brand-soft); color:var(--brand); font-family:inherit;
+}
+.alg-chip.on { background:var(--grad); color:var(--ink); }
 .cell-btn {
   display:block; width:100%; min-height:34px; max-height:34px;
   text-align:left; font-family:inherit; font-size:.62rem; font-weight:800;
@@ -470,14 +480,7 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
     <div class="grab"></div>
     <h3 style="margin:0 0 8px;font-family:Fraunces,serif">Correggi il giorno</h3>
     <p class="status" id="editMeta"></p>
-    <div class="field"><label>Primo</label><input id="f-primo" /></div>
-    <div class="field"><label>Allergeni primo</label><input id="f-primoA" placeholder="es. 1-14" /></div>
-    <div class="field"><label>Secondo</label><input id="f-secondo" /></div>
-    <div class="field"><label>Allergeni secondo</label><input id="f-secondoA" /></div>
-    <div class="field"><label>Contorno</label><input id="f-contorno" /></div>
-    <div class="field"><label>Frutta</label><input id="f-frutta" /></div>
-    <div class="field"><label>Merenda</label><input id="f-merenda" /></div>
-    <div class="field"><label>Allergeni merenda</label><input id="f-merendaA" /></div>
+    <div id="editBody"></div>
     <button class="btn btn-primary btn-wide" id="saveEdit">Salva correzioni</button>
     <button class="btn btn-ghost btn-wide" id="closeEdit">Annulla</button>
   </div>
@@ -510,6 +513,7 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
     </div>
   </div>
   <input id="cellBarInput" placeholder="Scrivi il piatto per intero">
+  <div id="cellBarAlg"></div>
 </div>
 <div class="toast" id="toast"></div>
 <script>

@@ -11,7 +11,8 @@
   function getGeminiKey(){
     try { return (localStorage.getItem(GEMINI_STORE) || "").trim(); } catch (e) { return ""; }
   }
-  function meal(){ return {primo:"",primoA:"",secondo:"",secondoA:"",contorno:"",frutta:"",merenda:"",merendaA:""}; }
+  function meal(){ return {primo:"",primoA:"",secondo:"",secondoA:"",contorno:"",contornoA:"",frutta:"",fruttaA:"",merenda:"",merendaA:""}; }
+  function aKeyOf(course){ return course + "A"; }
   function emptyDays(){ var o={}; DAYS.forEach(function(d){ o[d.id]=meal(); }); return o; }
   function makeMenu(p){
     p = p || {};
@@ -90,6 +91,39 @@
       return "<span class=tag>" + n + " · " + esc(ALLERGENS[n] || "") + "</span>";
     }).join("") + "</div></div>";
   }
+  function allergenChipsHtml(field, selected){
+    var on = {};
+    parseCodes(selected).forEach(function(n){ on[n]=1; });
+    return '<div class="alg-chips" data-alg="'+field+'">'+Object.keys(ALLERGENS).map(function(n){
+      return '<button type=button class="alg-chip'+(on[n]?" on":"")+'" data-n="'+n+'">'+n+" "+esc(ALLERGENS[n])+"</button>";
+    }).join("")+"</div>";
+  }
+  function codesFromChips(wrap){
+    if (!wrap) return "";
+    return Array.prototype.map.call(wrap.querySelectorAll(".alg-chip.on"), function(b){ return b.getAttribute("data-n"); }).join(",");
+  }
+  function wireAlgChips(root){
+    if (!root) return;
+    root.querySelectorAll(".alg-chip").forEach(function(b){
+      b.onclick = function(){
+        b.classList.toggle("on");
+        var wrap = b.parentNode;
+        var field = wrap && wrap.getAttribute("data-alg");
+        if (!field) return;
+        var codes = codesFromChips(wrap);
+        if (state.edit && currentMenu() && currentMenu().weeks[state.edit.w]) {
+          currentMenu().weeks[state.edit.w].days[state.edit.d][field] = codes;
+        }
+        if (cellBarKey) {
+          var p = cellBarKey.split(":");
+          var menu = currentMenu();
+          if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) {
+            menu.weeks[p[0]].days[p[1]][field] = codes;
+          }
+        }
+      };
+    });
+  }
 
   function isoWeekNumber(d){
     var date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -115,8 +149,8 @@
     var rows = [
       ["primo","Primo",d.primo,d.primoA],
       ["secondo","Secondo",d.secondo,d.secondoA],
-      ["contorno","Contorno",d.contorno,d.contornoA],
-      ["frutta","Frutta",d.frutta,d.fruttaA],
+      ["contorno","Contorno",d.contorno,d.contornoA||""],
+      ["frutta","Frutta",d.frutta,d.fruttaA||""],
       ["merenda","Merenda",d.merenda,d.merendaA]
     ].filter(function(x){ return x[2]; });
     var body = rows.length ? rows.map(function(x){
@@ -290,16 +324,28 @@
     var p = key.split(":"); var w=+p[0], d=p[1];
     var mealObj = m.weeks[w].days[d];
     state.edit = {w:w,d:d};
-    document.getElementById("editMeta").textContent = m.name+" "+m.weeks[w].name+" "+d;
-    ["primo","primoA","secondo","secondoA","contorno","frutta","merenda","merendaA"].forEach(function(k){ document.getElementById("f-"+k).value = mealObj[k]||""; });
+    var day = DAYS.find(function(x){ return x.id===d; });
+    document.getElementById("editMeta").textContent = (day?day.label:d) + " · " + m.weeks[w].name;
+    var courses = [["primo","Primo"],["secondo","Secondo"],["contorno","Contorno"],["frutta","Frutta"],["merenda","Merenda"]];
+    document.getElementById("editBody").innerHTML = courses.map(function(c){
+      return '<div class="edit-course"><label>'+c[1]+'</label><input id="f-'+c[0]+'" value="'+esc(mealObj[c[0]]||"")+'" placeholder="Piatto">' +
+        '<div class="label">Allergeni</div>'+allergenChipsHtml(c[0]+"A", mealObj[c[0]+"A"]||"")+"</div>";
+    }).join("");
+    wireAlgChips(document.getElementById("editBody"));
     document.getElementById("editModal").classList.add("open");
   }
-  document.getElementById("closeEdit").onclick = function(){ document.getElementById("editModal").classList.remove("open"); };
+  document.getElementById("closeEdit").onclick = function(){ document.getElementById("editModal").classList.remove("open"); state.edit=null; };
   document.getElementById("saveEdit").onclick = function(){
     if(!state.edit||!currentMenu()) return;
     var mealObj = currentMenu().weeks[state.edit.w].days[state.edit.d];
-    ["primo","primoA","secondo","secondoA","contorno","frutta","merenda","merendaA"].forEach(function(k){ mealObj[k]=document.getElementById("f-"+k).value.trim(); });
-    saveLibrary(); document.getElementById("editModal").classList.remove("open"); toast("Giorno aggiornato"); renderAll();
+    ["primo","secondo","contorno","frutta","merenda"].forEach(function(k){
+      var el = document.getElementById("f-"+k);
+      mealObj[k] = el ? el.value.trim() : "";
+    });
+    document.querySelectorAll("#editBody [data-alg]").forEach(function(wrap){
+      mealObj[wrap.getAttribute("data-alg")] = codesFromChips(wrap);
+    });
+    saveLibrary(); document.getElementById("editModal").classList.remove("open"); state.edit=null; toast("Giorno aggiornato"); renderAll();
   };
   document.getElementById("periodPill").onclick = function(){ goTab("info"); };
   var cellBarKey = null;
@@ -327,6 +373,12 @@
     document.getElementById("cellBarMeta").textContent = (day ? day.label : p[1]) + " · " + (labels[p[2]] || p[2]);
     var inp = document.getElementById("cellBarInput");
     inp.value = val;
+    var algBox = document.getElementById("cellBarAlg");
+    var aField = aKeyOf(p[2]);
+    var aVal = "";
+    if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) aVal = menu.weeks[p[0]].days[p[1]][aField] || "";
+    algBox.innerHTML = '<div class="label">Allergeni</div>'+allergenChipsHtml(aField, aVal);
+    wireAlgChips(algBox);
     document.getElementById("cellBar").classList.add("open");
     placeCellBar();
     setTimeout(function(){ inp.focus(); }, 40);
@@ -353,6 +405,15 @@
     if (!cellBarKey) { closeCellBar(); return; }
     var val = document.getElementById("cellBarInput").value.trim();
     applyCellValue(cellBarKey, val, true);
+    var wrap = document.querySelector("#cellBarAlg [data-alg]");
+    if (wrap) {
+      var p = cellBarKey.split(":");
+      var menu = currentMenu();
+      if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) {
+        menu.weeks[p[0]].days[p[1]][wrap.getAttribute("data-alg")] = codesFromChips(wrap);
+        saveLibrary();
+      }
+    }
     closeCellBar();
     if (document.getElementById("screen-settimane") && document.getElementById("screen-settimane").classList.contains("active")) {
       renderSettimane();
@@ -375,12 +436,12 @@
     window.visualViewport.addEventListener("resize", placeCellBar);
     window.visualViewport.addEventListener("scroll", placeCellBar);
   }
-  var MEAL_KEYS = ["primo","primoA","secondo","secondoA","contorno","frutta","merenda","merendaA"];
+  var MEAL_KEYS = ["primo","primoA","secondo","secondoA","contorno","contornoA","frutta","fruttaA","merenda","merendaA"];
   var WEEK_NAMES = ["Prima settimana","Seconda settimana","Terza settimana","Quarta settimana"];
   var AI_PROMPT = "Analizza questa foto o PDF di menu scolastico/mensa italiano. Rispondi SOLO con un oggetto JSON valido, niente testo attorno, niente markdown, niente backtick.\n" +
     "Struttura esatta: {name, period, weeks:[{name, days:{lunedi,martedi,mercoledi,giovedi,venerdi}}]}.\n" +
     "Sempre 4 settimane (Prima, Seconda, Terza, Quarta) e 5 giorni. Ogni giorno: primo, primoA, secondo, secondoA, contorno, frutta, merenda, merendaA.\n" +
-    "Se il foglio ha le settimane in colonna e i giorni in fascia, rispetta quella griglia. I numeri tipo 1-14 accanto al piatto vanno in primoA/secondoA/merendaA separati da virgola. Niente accenti nei nomi giorno. Non inventare piatti: se non si legge, lascia vuoto.";
+    "Se il foglio ha le settimane in colonna e i giorni in fascia, rispetta quella griglia. I numeri 1-14 UE accanto al piatto vanno in primoA/secondoA/contornoA/fruttaA/merendaA. Niente accenti nei nomi giorno. Non inventare piatti: se non si legge, lascia vuoto.";
 
   function renderImporta(){
     var box = document.getElementById("screen-importa");
@@ -994,7 +1055,8 @@
     return {
       primo:String(sd.primo||"").trim(), primoA:String(sd.primoA||"").trim(),
       secondo:String(sd.secondo||"").trim(), secondoA:String(sd.secondoA||"").trim(),
-      contorno:String(sd.contorno||"").trim(), frutta:String(sd.frutta||"").trim(),
+      contorno:String(sd.contorno||"").trim(), contornoA:String(sd.contornoA||"").trim(),
+      frutta:String(sd.frutta||"").trim(), fruttaA:String(sd.fruttaA||"").trim(),
       merenda:String(sd.merenda||"").trim(), merendaA:String(sd.merendaA||"").trim()
     };
   }
