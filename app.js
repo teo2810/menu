@@ -149,6 +149,17 @@
     pick.textContent = m ? m.name : "Scegli menu";
     document.getElementById("periodPill").textContent = (m && (m.period || m.name)) || "Senza periodo";
   }
+  function dishFilled(m){
+    return !!(m && (String(m.primo||"").trim() || String(m.secondo||"").trim() || String(m.contorno||"").trim() || String(m.frutta||"").trim() || String(m.merenda||"").trim()));
+  }
+  function weekFilled(w){
+    return !!(w && DAYS.some(function(d){ return dishFilled(w.days && w.days[d.id]); }));
+  }
+  function filledWeekIdx(menu){
+    var out=[];
+    (menu && menu.weeks || []).forEach(function(w,i){ if (weekFilled(w)) out.push(i); });
+    return out;
+  }
   function mealHtml(d, weekIdx, dayId){
     var rows = [
       ["primo","Primo",d.primo,d.primoA],
@@ -169,7 +180,8 @@
     var now = new Date();
     var map = {1:"lunedi",2:"martedi",3:"mercoledi",4:"giovedi",5:"venerdi"};
     var dayId = map[now.getDay()];
-    var week = (isoWeekNumber(now) - 1) % 4;
+    var vis = filledWeekIdx(m);
+    var week = vis.length===1 ? vis[0] : (vis.length ? vis[(isoWeekNumber(now)-1)%vis.length] : (isoWeekNumber(now)-1)%4);
     var nice = now.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"});
     box.innerHTML = "<div class=hero-today><div class=kicker>"+esc(m.name)+"</div><h2>"+nice+"</h2></div>"+(dayId?mealHtml(m.weeks[week].days[dayId],week,dayId):"<div class=meal-card><p>Oggi non c e mensa.</p></div>");
   }
@@ -177,7 +189,12 @@
     var box = document.getElementById("screen-settimane");
     var m = currentMenu();
     if (!m) { box.innerHTML = "<div class=meal-card empty><h2>Nessun menu</h2><button class='btn btn-primary btn-wide' id=goImport>Importa il primo menu</button></div>"; return; }
-    var tabs = m.weeks.map(function(w,i){ return "<button class='week-tab"+(i===state.week?" on":"")+"' data-week="+i+">"+esc(w.name.replace(" settimana",""))+"</button>"; }).join("");
+    var vis = filledWeekIdx(m);
+    if (vis.length && vis.indexOf(state.week)<0) state.week = vis[0];
+    var tabs = vis.length<=1 ? "" : m.weeks.map(function(w,i){
+      if (vis.length && vis.indexOf(i)<0) return "";
+      return "<button class='week-tab"+(i===state.week?" on":"")+"' data-week="+i+">"+esc(w.name.replace(" settimana",""))+"</button>";
+    }).join("");
     var chips = DAYS.map(function(d){ return "<button class='day-chip"+(d.id===state.day?" on":"")+"' data-day="+d.id+"><small>"+d.short+"</small><b>"+d.label.slice(0,3)+"</b></button>"; }).join("");
     var emptyWeek = !DAYS.some(function(d){
       var mealObj = m.weeks[state.week].days[d.id];
@@ -186,7 +203,7 @@
     var hint = emptyWeek
       ? '<div class="note">Menu vuoto: tocca una cella per scrivere, oppure torna a Importa per un JSON o una foto. Per cambiare menu usa il nome in alto.</div><button class="btn btn-ghost btn-wide" id="backImport">Torna a Importa</button>'
       : '<p class="status">Tocca una cella: si apre la riga sopra la tastiera.</p>';
-    box.innerHTML = "<div class=week-tabs>"+tabs+"</div><div class=day-rail>"+chips+"</div>"+mealHtml(m.weeks[state.week].days[state.day],state.week,state.day)+
+    box.innerHTML = (tabs?"<div class=week-tabs>"+tabs+"</div>":"")+"<div class=day-rail>"+chips+"</div>"+mealHtml(m.weeks[state.week].days[state.day],state.week,state.day)+
       '<div class="meal-card"><h2>Tabella settimana</h2>'+hint+weekGridHtml(m.weeks[state.week], state.week, true)+"</div>";
   }
   function wireImport(){
@@ -269,7 +286,11 @@
     var box = document.getElementById("screen-info");
     var list = state.menus.length
       ? "<h3 style='font-family:Fraunces,serif'>I tuoi menu</h3>"+state.menus.map(function(item){
-          return "<div class='allergen-row menu-row'><b>"+esc(item.name)+"</b><span><button class=edit-btn data-use="+item.id+">Apri</button> <button class='edit-btn btn-del' data-del="+item.id+">Elimina</button></span></div>";
+          return "<div class='allergen-row menu-row'><input class=menu-rename data-rename="+item.id+" value=\""+esc(item.name)+"\" aria-label=Nome>"+
+            "<span><button type=button class=ico-btn data-use="+item.id+" aria-label=Apri>"+
+            "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M9 6h11v12H9'/><path d='M13 12H4'/><path d='M8 8l-4 4 4 4'/></svg></button>"+
+            "<button type=button class='ico-btn danger' data-del="+item.id+" aria-label=Elimina>"+
+            "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M4 7h16'/><path d='M9 7V5h6v2'/><path d='M7 7l1 13h8l1-13'/></svg></button></span></div>";
         }).join("")
       : "<div class=note>Ancora nessun menu. Vai su Importa.</div>";
     box.innerHTML = tintCardHtml() + list;
@@ -293,6 +314,22 @@
       b.onclick = function(){ applyTint(b.getAttribute("data-tint-pick")); };
     });
     document.querySelectorAll("[data-use]").forEach(function(b){ b.onclick = function(){ state.activeId=b.getAttribute("data-use"); saveLibrary(); renderAll(); }; });
+    document.querySelectorAll("[data-rename]").forEach(function(inp){
+      var apply = function(){
+        var id = inp.getAttribute("data-rename");
+        var item = state.menus.find(function(x){ return x.id===id; });
+        if (!item) return;
+        var name = inp.value.trim();
+        if (!name) { inp.value = item.name; return; }
+        if (name===item.name) return;
+        item.name = name;
+        saveLibrary();
+        renderHeader();
+        toast("Nome aggiornato");
+      };
+      inp.onchange = apply;
+      inp.onkeydown = function(e){ if (e.key==="Enter") { e.preventDefault(); inp.blur(); } };
+    });
     document.querySelectorAll("[data-del]").forEach(function(b){
       b.onclick = function(){
         var id = b.getAttribute("data-del");
@@ -673,6 +710,14 @@
 
   function weekGridHtml(weekObj, weekIdx, editable){
     var courses = [["primo","Primo"],["secondo","Secondo"],["contorno","Contorno"],["frutta","Frutta"],["merenda","Merenda"]];
+    if (weekFilled(weekObj)) {
+      courses = courses.filter(function(c){
+        return DAYS.some(function(d){
+          var m = weekObj.days && weekObj.days[d.id];
+          return m && String(m[c[0]]||"").trim();
+        });
+      });
+    }
     var head = "<tr><th></th>"+courses.map(function(c){ return "<th>"+c[1]+"</th>"; }).join("")+"</tr>";
     var body = DAYS.map(function(d){
       var m = (weekObj && weekObj.days && weekObj.days[d.id]) || meal();
@@ -1041,9 +1086,12 @@
     var norm = window.__importNorm;
     if (!norm) return;
     var n = countFilled(norm);
+    var vis = filledWeekIdx(norm);
+    if (vis.length && vis.indexOf(state.week)<0) state.week = vis[0];
     var w = state.week || 0;
     var week = norm.weeks[w] || norm.weeks[0];
-    var tabs = (norm.weeks||[]).map(function(item,i){
+    var tabs = vis.length<=1 ? "" : (norm.weeks||[]).map(function(item,i){
+      if (vis.indexOf(i)<0) return "";
       return "<button class='week-tab"+(i===w?" on":"")+"' data-ocr-week="+i+">"+esc(item.name.replace(" settimana",""))+"</button>";
     }).join("");
     var box = document.getElementById("screen-importa");
@@ -1052,7 +1100,8 @@
       '<p class="status">Non e un menu salvato. Campi pieni: '+n+'. Se il testo e illeggibile chiudi e passa da un AI.</p>' +
       '<div class="field" style="text-align:left"><label>Nome</label><input id="imp-title-name" value="'+esc(norm.name||"Bozza OCR")+'"></div>' +
       '<div class="field" style="text-align:left"><label>Periodo</label><input id="imp-period" value="'+esc(norm.period||"")+'"></div></div>' +
-      '<div class="week-tabs">'+tabs+"</div>" +
+      (tabs?"<div class=week-tabs>"+tabs+"</div>":"") +
+      "<div class=day-rail>"+DAYS.map(function(d){ return "<button class='day-chip"+(d.id===state.day?" on":"")+"' data-ocr-day="+d.id+"><small>"+d.short+"</small><b>"+d.label.slice(0,3)+"</b></button>"; }).join("")+"</div>" +
       mealHtml(week.days[state.day]||meal(), w, state.day) +
       '<div class="meal-card"><h2>Tabella settimana</h2><p class="status">Tocca una cella. Chiudi per lasciare perdere.</p>'+weekGridHtml(week,w,true)+"</div>" +
       '<button class="btn btn-primary btn-wide" id="applyParse">Salva come menu</button>' +
@@ -1063,6 +1112,13 @@
       b.onclick=function(){
         pullOcrMeta();
         state.week=+b.getAttribute("data-ocr-week");
+        paintOcrDraft();
+      };
+    });
+    document.querySelectorAll("[data-ocr-day]").forEach(function(b){
+      b.onclick=function(){
+        pullOcrMeta();
+        state.day=b.getAttribute("data-ocr-day");
         paintOcrDraft();
       };
     });
