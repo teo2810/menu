@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<meta name="theme-color" content="#F6D4E0" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F6D4E0" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#F6D4E0" />
 <script>
 (function(){
   var ok = {rosa:"#F6D4E0",cielo:"#D4E4F6",menta:"#D4F0E4",limone:"#F6F0D4",pesca:"#F6E0D4",corallo:"#F6D4DC"};
@@ -10,18 +13,8 @@
   try { id = localStorage.getItem("menu-tint-v1") || "rosa"; } catch (e) {}
   if (!ok[id]) id = "rosa";
   document.documentElement.setAttribute("data-tint", id);
-  document.documentElement.style.backgroundColor = ok[id];
   window.paintStatusBar = function(hex){
-    document.querySelectorAll("meta[name=theme-color]").forEach(function(m){ m.parentNode.removeChild(m); });
-    function add(media){
-      var m = document.createElement("meta");
-      m.setAttribute("name", "theme-color");
-      m.setAttribute("content", hex);
-      if (media) m.setAttribute("media", media);
-      document.head.appendChild(m);
-    }
-    add();
-    add("(display-mode: standalone)");
+    document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.content = hex; });
     document.documentElement.style.backgroundColor = hex;
   };
   window.paintStatusBar(ok[id]);
@@ -374,6 +367,12 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
 }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 .empty { text-align:center; padding:28px 12px; }
+#statusWash {
+  position:fixed; top:0; left:0; right:0;
+  height:max(env(safe-area-inset-top, 0px), 12px);
+  background:var(--wash);
+  z-index:80; pointer-events:none;
+}
 .tint-card { margin-bottom:14px; }
 .tint-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:10px; }
 .tint-head b { font-family:Fraunces,serif; font-size:1.12rem; }
@@ -394,6 +393,7 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
 </style>
 </head>
 <body>
+<div id="statusWash" aria-hidden="true"></div>
 <div class="app">
   <header class="top">
     <div class="brand-block">
