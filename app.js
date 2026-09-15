@@ -111,10 +111,14 @@
         var field = wrap && wrap.getAttribute("data-alg");
         if (!field) return;
         var codes = codesFromChips(wrap);
-        if (state.edit && currentMenu() && currentMenu().weeks[state.edit.w]) {
+        if (isOcrDraftOpen() && window.__importNorm.weeks[state.week||0]) {
+          var p0 = cellBarKey ? cellBarKey.split(":") : [state.week, state.day];
+          if (window.__importNorm.weeks[p0[0]] && window.__importNorm.weeks[p0[0]].days[p0[1]]) {
+            window.__importNorm.weeks[p0[0]].days[p0[1]][field] = codes;
+          }
+        } else if (state.edit && currentMenu() && currentMenu().weeks[state.edit.w]) {
           currentMenu().weeks[state.edit.w].days[state.edit.d][field] = codes;
-        }
-        if (cellBarKey) {
+        } else if (cellBarKey) {
           var p = cellBarKey.split(":");
           var menu = currentMenu();
           if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) {
@@ -368,7 +372,8 @@
     var day = DAYS.find(function(d){ return d.id===p[1]; });
     var val = "";
     var menu = currentMenu();
-    if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) val = menu.weeks[p[0]].days[p[1]][p[2]] || "";
+    if (isOcrDraftOpen() && window.__importNorm.weeks[p[0]]) val = window.__importNorm.weeks[p[0]].days[p[1]][p[2]] || "";
+    else if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) val = menu.weeks[p[0]].days[p[1]][p[2]] || "";
     if (!val && window.__importNorm && window.__importNorm.weeks[p[0]]) val = window.__importNorm.weeks[p[0]].days[p[1]][p[2]] || "";
     document.getElementById("cellBarMeta").textContent = (day ? day.label : p[1]) + " · " + (labels[p[2]] || p[2]);
     var inp = document.getElementById("cellBarInput");
@@ -376,17 +381,19 @@
     var algBox = document.getElementById("cellBarAlg");
     var aField = aKeyOf(p[2]);
     var aVal = "";
-    if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) aVal = menu.weeks[p[0]].days[p[1]][aField] || "";
+    if (isOcrDraftOpen() && window.__importNorm.weeks[p[0]]) aVal = window.__importNorm.weeks[p[0]].days[p[1]][aField] || "";
+    else if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) aVal = menu.weeks[p[0]].days[p[1]][aField] || "";
     algBox.innerHTML = '<div class="label">Allergeni</div>'+allergenChipsHtml(aField, aVal);
     wireAlgChips(algBox);
     document.getElementById("cellBar").classList.add("open");
     placeCellBar();
     setTimeout(function(){ inp.focus(); }, 40);
   }
+  function isOcrDraftOpen(){ return !!(window.__importNorm && document.getElementById("discardOcr")); }
   function applyCellValue(key, val, persist){
     var p = String(key||"").split(":");
     var menu = currentMenu();
-    if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) {
+    if (!isOcrDraftOpen() && menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) {
       menu.weeks[p[0]].days[p[1]][p[2]] = val;
       if (persist) saveLibrary();
     }
@@ -408,14 +415,21 @@
     var wrap = document.querySelector("#cellBarAlg [data-alg]");
     if (wrap) {
       var p = cellBarKey.split(":");
-      var menu = currentMenu();
-      if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) {
-        menu.weeks[p[0]].days[p[1]][wrap.getAttribute("data-alg")] = codesFromChips(wrap);
-        saveLibrary();
+      var field = wrap.getAttribute("data-alg");
+      var codes = codesFromChips(wrap);
+      if (isOcrDraftOpen() && window.__importNorm.weeks[p[0]]) {
+        window.__importNorm.weeks[p[0]].days[p[1]][field] = codes;
+      } else {
+        var menu = currentMenu();
+        if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) {
+          menu.weeks[p[0]].days[p[1]][field] = codes;
+          saveLibrary();
+        }
       }
     }
     closeCellBar();
-    if (document.getElementById("screen-settimane") && document.getElementById("screen-settimane").classList.contains("active")) {
+    if (isOcrDraftOpen()) paintOcrDraft();
+    else if (document.getElementById("screen-settimane") && document.getElementById("screen-settimane").classList.contains("active")) {
       renderSettimane();
       bind();
     }
@@ -934,10 +948,22 @@
     return (el && el.value.trim()) || "Nuovo menu";
   }
 
+  var ocrAbort=false;
+  function discardOcrDraft(){
+    ocrAbort=true;
+    window.__importNorm=null;
+    closeCellBar();
+    renderImporta();
+    wireImport();
+    toast("Bozza chiusa, niente salvato");
+  }
   async function handleFile(file){
     if(!file) return;
-    var work=document.getElementById("importWork");
-    work.innerHTML='<div class="meal-card"><div class="status">Preparazione...</div><div class="preview-wrap" id="preview"></div><div class="progress"><i id="bar"></i></div><div class="status" id="ocrStatus">Attendi</div></div>';
+    ocrAbort=false;
+    var startName=proposedName();
+    var box=document.getElementById("screen-importa");
+    box.innerHTML='<div class="meal-card"><h2>Bozza OCR <button type=button class="edit-btn" id="discardOcr">Chiudi</button></h2><p class="status">Sto leggendo il foglio. Puoi chiudere e lasciare perdere.</p><div class="preview-wrap" id="preview"></div><div class="progress"><i id="bar"></i></div><div class="status" id="ocrStatus">Preparazione...</div></div>';
+    document.getElementById("discardOcr").onclick=function(){ discardOcrDraft(); };
     try{
       var previewUrl="";
       var sourceUrl="";
@@ -982,10 +1008,12 @@
         }
         if (!norm || countFilled(ocrNorm)>countFilled(norm)) { norm=ocrNorm; if(used!=="ai") used="ocr"; }
       }
+      if (ocrAbort) return;
       if (!norm) norm=validateAndNormalizeMenuJson({ name:proposedName(), weeks:[] });
-      if (proposedName() && proposedName()!=="Nuovo menu") norm.name=proposedName();
+      if (startName && startName!=="Nuovo menu") norm.name=startName;
       showReview(norm, used, rawText);
     }catch(err){
+      if (ocrAbort) return;
       setStatus("Errore: "+err.message);
       showReview(validateAndNormalizeMenuJson({ name:proposedName(), weeks:[] }), "ocr", "");
     }
@@ -1006,48 +1034,54 @@
 
   function showReview(norm, used, rawText){
     window.__importNorm = norm;
+    window.__importRaw = rawText || "";
+    paintOcrDraft();
+  }
+  function paintOcrDraft(){
+    var norm = window.__importNorm;
+    if (!norm) return;
     var n = countFilled(norm);
-    var src = "Bozza OCR. Controlla ogni giorno prima di salvare. Per un risultato pulito usa il JSON da AI sopra.";
-    document.getElementById("importWork").innerHTML +=
-      '<div class="meal-card"><h2>Anteprima struttura</h2><p class="status">'+esc(src)+" Campi pieni: "+n+". Controlla, correggi il JSON se serve, poi salva.</p>"+
-      '<div class="field"><label>Nome menu</label><input id="imp-title-name" value="'+esc(norm.name||"Nuovo menu")+'"></div>'+
-      '<div class="field"><label>Periodo</label><input id="imp-period" value="'+esc(norm.period||"")+'"></div>'+
-      '<div class="field"><label>JSON (opzionale)</label><textarea id="imp-json" style="min-height:110px">'+esc(JSON.stringify(norm,null,2))+"</textarea></div>"+
-      (rawText ? '<div class="field"><label>Testo OCR grezzo</label><textarea id="imp-raw">'+esc(rawText)+"</textarea></div>" : "")+
-      '<button class="btn btn-ghost btn-wide" id="reparse">Rileggi dal JSON / testo</button>'+
-      '<button class="btn btn-primary btn-wide" id="applyParse">Salva come nuovo menu</button>'+
-      '<button class="btn btn-ghost btn-wide" id="copyJson">Copia JSON</button></div>'+
-      '<div id="parsePreview">'+previewWeeksHtml(norm)+"</div>";
-    document.getElementById("reparse").onclick=function(){
-      try{
-        var fromJson=document.getElementById("imp-json").value;
-        var obj=JSON.parse(fromJson);
-        window.__importNorm=validateAndNormalizeMenuJson(obj);
-      }catch(e){
-        var raw=document.getElementById("imp-raw");
-        window.__importNorm=validateAndNormalizeMenuJson({ name:proposedName(), weeks:parseMenuText(raw?raw.value:"") });
-      }
-      document.getElementById("imp-json").value=JSON.stringify(window.__importNorm,null,2);
-      document.getElementById("parsePreview").innerHTML=previewWeeksHtml(window.__importNorm);
-      bind();
-      toast("Struttura aggiornata");
-    };
+    var w = state.week || 0;
+    var week = norm.weeks[w] || norm.weeks[0];
+    var tabs = (norm.weeks||[]).map(function(item,i){
+      return "<button class='week-tab"+(i===w?" on":"")+"' data-ocr-week="+i+">"+esc(item.name.replace(" settimana",""))+"</button>";
+    }).join("");
+    var box = document.getElementById("screen-importa");
+    box.innerHTML =
+      '<div class="meal-card"><h2>Bozza OCR <button type=button class="edit-btn" id="discardOcr">Chiudi</button></h2>' +
+      '<p class="status">Non e un menu salvato. Campi pieni: '+n+'. Se il testo e illeggibile chiudi e passa da un AI.</p>' +
+      '<div class="field" style="text-align:left"><label>Nome</label><input id="imp-title-name" value="'+esc(norm.name||"Bozza OCR")+'"></div>' +
+      '<div class="field" style="text-align:left"><label>Periodo</label><input id="imp-period" value="'+esc(norm.period||"")+'"></div></div>' +
+      '<div class="week-tabs">'+tabs+"</div>" +
+      mealHtml(week.days[state.day]||meal(), w, state.day) +
+      '<div class="meal-card"><h2>Tabella settimana</h2><p class="status">Tocca una cella. Chiudi per lasciare perdere.</p>'+weekGridHtml(week,w,true)+"</div>" +
+      '<button class="btn btn-primary btn-wide" id="applyParse">Salva come menu</button>' +
+      '<button class="btn btn-ghost btn-wide" id="discardOcr2">Scarta la bozza</button>';
+    document.getElementById("discardOcr").onclick=discardOcrDraft;
+    document.getElementById("discardOcr2").onclick=discardOcrDraft;
+    document.querySelectorAll("[data-ocr-week]").forEach(function(b){
+      b.onclick=function(){
+        pullOcrMeta();
+        state.week=+b.getAttribute("data-ocr-week");
+        paintOcrDraft();
+      };
+    });
     document.getElementById("applyParse").onclick=function(){
       try{
-        var base=window.__importNorm || validateAndNormalizeMenuJson(JSON.parse(document.getElementById("imp-json").value));
-        base=readGridIntoNorm(base);
-        var norm2=validateAndNormalizeMenuJson(base);
-        norm2.name=(document.getElementById("imp-title-name").value||norm2.name).trim();
-        norm2.period=(document.getElementById("imp-period").value||"").trim();
+        pullOcrMeta();
+        var norm2=validateAndNormalizeMenuJson(window.__importNorm);
+        window.__importNorm=null;
         saveImportedMenu(norm2);
-      }catch(err){ toast("JSON non valido: "+err.message); }
-    };
-    document.getElementById("copyJson").onclick=function(){
-      var box=document.getElementById("imp-json");
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(box.value).then(function(){ toast("JSON copiato"); }).catch(function(){ fallbackCopy(box); });
-      else fallbackCopy(box);
+      }catch(err){ toast("Bozza non valida: "+err.message); }
     };
     bind();
+  }
+  function pullOcrMeta(){
+    if (!window.__importNorm) return;
+    var nameEl=document.getElementById("imp-title-name");
+    var perEl=document.getElementById("imp-period");
+    if (nameEl) window.__importNorm.name=nameEl.value.trim()||window.__importNorm.name;
+    if (perEl) window.__importNorm.period=perEl.value.trim();
   }
 
   function normalizeMealShape(sd){
