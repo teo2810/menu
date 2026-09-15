@@ -141,8 +141,15 @@
     if (!m) { box.innerHTML = "<div class=meal-card empty><h2>Nessun menu</h2><button class='btn btn-primary btn-wide' id=goImport>Importa il primo menu</button></div>"; return; }
     var tabs = m.weeks.map(function(w,i){ return "<button class='week-tab"+(i===state.week?" on":"")+"' data-week="+i+">"+esc(w.name.replace(" settimana",""))+"</button>"; }).join("");
     var chips = DAYS.map(function(d){ return "<button class='day-chip"+(d.id===state.day?" on":"")+"' data-day="+d.id+"><small>"+d.short+"</small><b>"+d.label.slice(0,3)+"</b></button>"; }).join("");
+    var emptyWeek = !DAYS.some(function(d){
+      var mealObj = m.weeks[state.week].days[d.id];
+      return mealObj && (mealObj.primo || mealObj.secondo || mealObj.contorno || mealObj.frutta || mealObj.merenda);
+    });
+    var hint = emptyWeek
+      ? '<div class="note">Menu vuoto: tocca una cella per scrivere, oppure torna a Importa per un JSON o una foto. Per cambiare menu usa il nome in alto.</div><button class="btn btn-ghost btn-wide" id="backImport">Torna a Importa</button>'
+      : '<p class="status">Tocca una cella: si apre la riga sopra la tastiera.</p>';
     box.innerHTML = "<div class=week-tabs>"+tabs+"</div><div class=day-rail>"+chips+"</div>"+mealHtml(m.weeks[state.week].days[state.day],state.week,state.day)+
-      '<div class="meal-card"><h2>Tabella settimana</h2><p class="status">Tocca una cella per scrivere. Stessa griglia dell import.</p>'+weekGridHtml(m.weeks[state.week], state.week, true)+"</div>";
+      '<div class="meal-card"><h2>Tabella settimana</h2>'+hint+weekGridHtml(m.weeks[state.week], state.week, true)+"</div>";
   }
   function wireImport(){
     var foto = document.getElementById("btnFoto");
@@ -156,10 +163,10 @@
     var blank = document.getElementById("btnBlank");
     if (blank) blank.onclick = function(){
       var el = document.getElementById("imp-name");
-      var name = ((el && el.value.trim()) || "Nuovo menu").trim();
+      var name = ((el && el.value.trim()) || "Menu vuoto").trim();
       var created = makeMenu({ name:name });
       state.menus.push(created); state.activeId = created.id; saveLibrary();
-      toast("Creato: "+created.name); goTab("settimane"); renderAll();
+      toast("Apri la tabella e tocca le celle"); goTab("settimane"); renderAll();
     };
     var jsonBtn = document.getElementById("btnJsonFile");
     var jsonFile = document.getElementById("fileJson");
@@ -239,18 +246,10 @@
     document.querySelectorAll("[data-edit]").forEach(function(b){ b.onclick = function(){ openEdit(b.getAttribute("data-edit")); }; });
     document.querySelectorAll("[data-week]").forEach(function(b){ b.onclick = function(){ state.week=+b.getAttribute("data-week"); renderSettimane(); bind(); }; });
     document.querySelectorAll("[data-day]").forEach(function(b){ b.onclick = function(){ state.day=b.getAttribute("data-day"); renderSettimane(); bind(); }; });
-    document.querySelectorAll("[data-cell]").forEach(function(inp){
-      inp.oninput = function(){
-        var p = inp.getAttribute("data-cell").split(":");
-        var menu = currentMenu();
-        if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) {
-          menu.weeks[p[0]].days[p[1]][p[2]] = inp.value;
-          saveLibrary();
-        }
-        if (window.__importNorm && window.__importNorm.weeks[p[0]]) {
-          window.__importNorm.weeks[p[0]].days[p[1]][p[2]] = inp.value;
-        }
-      };
+    var backImp = document.getElementById("backImport");
+    if (backImp) backImp.onclick = function(){ goTab("importa"); };
+    document.querySelectorAll("[data-cell]").forEach(function(btn){
+      btn.onclick = function(){ openCellBar(btn.getAttribute("data-cell")); };
     });
     document.querySelectorAll("[data-tint-pick]").forEach(function(b){
       b.onclick = function(){ applyTint(b.getAttribute("data-tint-pick")); };
@@ -303,6 +302,66 @@
     saveLibrary(); document.getElementById("editModal").classList.remove("open"); toast("Giorno aggiornato"); renderAll();
   };
   document.getElementById("periodPill").onclick = function(){ goTab("info"); };
+  var cellBarKey = null;
+  function closeCellBar(){
+    var bar = document.getElementById("cellBar");
+    if (bar) bar.classList.remove("open");
+    cellBarKey = null;
+  }
+  function placeCellBar(){
+    var bar = document.getElementById("cellBar");
+    if (!bar || !bar.classList.contains("open")) return;
+    var vv = window.visualViewport;
+    var kb = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+    bar.style.bottom = kb + "px";
+  }
+  function openCellBar(key){
+    cellBarKey = key;
+    var p = String(key||"").split(":");
+    var labels = { primo:"Primo", secondo:"Secondo", contorno:"Contorno", frutta:"Frutta", merenda:"Merenda" };
+    var day = DAYS.find(function(d){ return d.id===p[1]; });
+    var val = "";
+    var menu = currentMenu();
+    if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) val = menu.weeks[p[0]].days[p[1]][p[2]] || "";
+    if (!val && window.__importNorm && window.__importNorm.weeks[p[0]]) val = window.__importNorm.weeks[p[0]].days[p[1]][p[2]] || "";
+    document.getElementById("cellBarMeta").textContent = (day ? day.label : p[1]) + " · " + (labels[p[2]] || p[2]);
+    var inp = document.getElementById("cellBarInput");
+    inp.value = val;
+    document.getElementById("cellBar").classList.add("open");
+    placeCellBar();
+    setTimeout(function(){ inp.focus(); }, 40);
+  }
+  function commitCellBar(){
+    if (!cellBarKey) { closeCellBar(); return; }
+    var p = cellBarKey.split(":");
+    var val = document.getElementById("cellBarInput").value.trim();
+    var menu = currentMenu();
+    if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) {
+      menu.weeks[p[0]].days[p[1]][p[2]] = val;
+      saveLibrary();
+    }
+    if (window.__importNorm && window.__importNorm.weeks[p[0]]) {
+      window.__importNorm.weeks[p[0]].days[p[1]][p[2]] = val;
+    }
+    closeCellBar();
+    var cellBtn = document.querySelector("[data-cell=\""+p[0]+":"+p[1]+":"+p[2]+"\"]");
+    if (cellBtn) {
+      cellBtn.textContent = val || "…";
+      if (cellBtn.parentElement) cellBtn.parentElement.classList.toggle("cell-empty", !val);
+    }
+    if (document.getElementById("screen-settimane") && document.getElementById("screen-settimane").classList.contains("active")) {
+      renderSettimane();
+      bind();
+    }
+  }
+  document.getElementById("cellBarOk").onclick = function(){ commitCellBar(); };
+  document.getElementById("cellBarInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") { e.preventDefault(); commitCellBar(); }
+  });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", placeCellBar);
+    window.visualViewport.addEventListener("scroll", placeCellBar);
+  }
   var MEAL_KEYS = ["primo","primoA","secondo","secondoA","contorno","frutta","merenda","merendaA"];
   var WEEK_NAMES = ["Prima settimana","Seconda settimana","Terza settimana","Quarta settimana"];
   var AI_PROMPT = "Analizza questa foto o PDF di menu scolastico/mensa italiano. Rispondi SOLO con un oggetto JSON valido, niente testo attorno, niente markdown, niente backtick.\n" +
@@ -314,23 +373,21 @@
     var box = document.getElementById("screen-importa");
     if (!box) return;
     box.innerHTML =
-      '<div class="drop"><h3>1. Meglio con un AI</h3><p>Copia il prompt, aprilo in Gemini / ChatGPT / Claude e allegalo alla foto o al PDF del foglio. Poi incolla qui solo il JSON.</p>' +
-      '<div class="field" style="text-align:left"><label>Nome menu</label><input id="imp-name" placeholder="es. Menu settembre"></div>' +
-      '<div class="prompt-row"><span class="prompt-ph">Prompt menu, 4 settimane, JSON</span><button type=button class="btn btn-primary" id="copyPrompt">Copia</button></div>' +
+      '<div id="importa-compact">' +
+      '<div class="drop" style="margin-bottom:10px"><h3>Crea menu vuoto</h3><p>Parti dalla tabella e compila a mano. In alto cambi menu o torni qui.</p>' +
+      '<div class="field" style="text-align:left"><label>Nome</label><input id="imp-name" placeholder="es. Menu settembre"></div>' +
+      '<button class="btn btn-primary btn-wide" id="btnBlank">Crea e apri la tabella</button></div>' +
+      '<div class="meal-card"><h2>Da un AI</h2><p class="status">Copia il prompt, allegalo a foto o PDF in Gemini / ChatGPT / Claude, incolla il JSON.</p>' +
+      '<div class="prompt-row"><span class="prompt-ph">Prompt 4 settimane</span><button type=button class="btn btn-ghost" id="copyPrompt">Copia</button></div>' +
       '<textarea id="promptBox" hidden>'+esc(AI_PROMPT)+"</textarea>" +
-      '<div class="field"><label>Incolla il JSON</label><textarea id="jsonPaste" placeholder="{ name, period, weeks... }"></textarea></div>' +
-      '<button class="btn btn-primary btn-wide" id="applyJsonPaste">Importa JSON</button>' +
-      '<button class="btn btn-ghost btn-wide" id="btnJsonFile">Oppure carica file .json</button>' +
+      '<div class="field"><label>JSON</label><textarea id="jsonPaste" placeholder="{ ... }"></textarea></div>' +
+      '<div class="actions"><button class="btn btn-primary" id="applyJsonPaste">Importa JSON</button><button class="btn btn-ghost" id="btnJsonFile">File .json</button></div>' +
       '<input id="fileJson" type="file" accept=".json,application/json" hidden></div>' +
       '<div id="importWork"></div>' +
-      '<div class="meal-card" style="margin-top:14px">' +
-        "<h2>2. Bozza da foto (OCR)</h2>" +
-        '<p class="status">Solo se non vuoi passare da un AI. Precompila la tabella: controlla ogni cella.</p>' +
-        '<div class="actions"><button class="btn btn-ghost" id="btnFoto">Scatta foto</button><button class="btn btn-ghost" id="btnFile">Allega PDF o foto</button></div>' +
-        '<input id="fileCam" type="file" accept="image/*" capture="environment" hidden>' +
-        '<input id="fileAny" type="file" accept="image/*,application/pdf" hidden>' +
-      "</div>" +
-      '<button class="btn btn-ghost btn-wide" id="btnBlank">Crea menu vuoto</button>';
+      '<div class="meal-card"><h2>Bozza OCR</h2><p class="status">Precompila la tabella. Controlla le celle.</p>' +
+      '<div class="actions"><button class="btn btn-ghost" id="btnFoto">Foto</button><button class="btn btn-ghost" id="btnFile">PDF o foto</button></div>' +
+      '<input id="fileCam" type="file" accept="image/*" capture="environment" hidden>' +
+      '<input id="fileAny" type="file" accept="image/*,application/pdf" hidden></div></div>';
   }
 
   function loadScript(src){ return new Promise(function(res,rej){ var s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=function(){rej(new Error("script"));}; document.head.appendChild(s); }); }
@@ -534,7 +591,7 @@
       return "<tr><th class=day>"+d.short+"</th>"+courses.map(function(c){
         var val = m[c[0]] || "";
         var empty = val ? "" : " cell-empty";
-        if (editable) return "<td class='"+empty+"'><input data-cell="+weekIdx+":"+d.id+":"+c[0]+" value=\""+esc(val)+"\"></td>";
+        if (editable) return "<td class='"+empty+"'><button type=button class=cell-btn data-cell="+weekIdx+":"+d.id+":"+c[0]+">"+esc(val || "…")+"</button></td>";
         return "<td>"+esc(val || "")+"</td>";
       }).join("")+"</tr>";
     }).join("");
