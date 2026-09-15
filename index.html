@@ -280,6 +280,22 @@ textarea, input:not(.menu-pick), select:not(.menu-pick) {
 textarea { min-height:140px; resize:vertical; }
 #promptBox { min-height:190px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.72rem; color:var(--muted); }
 #jsonPaste { min-height:110px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.78rem; }
+.prompt-row {
+  display:flex; align-items:center; gap:8px; margin:10px 0 12px;
+  background:#fff; border:1px solid var(--line); border-radius:16px; padding:8px 8px 8px 14px;
+}
+.prompt-ph { flex:1; font-size:.78rem; font-weight:800; color:var(--muted); text-align:left; }
+.prompt-row .btn { margin:0; padding:10px 16px; width:auto; }
+.week-grid { overflow-x:auto; margin:8px 0 4px; -webkit-overflow-scrolling:touch; }
+.week-grid table { width:100%; border-collapse:separate; border-spacing:4px; min-width:420px; }
+.week-grid th { font-size:.62rem; font-weight:800; color:var(--muted); text-align:left; padding:0 2px; letter-spacing:.04em; text-transform:uppercase; }
+.week-grid td { padding:0; vertical-align:top; }
+.week-grid th.day { width:36px; color:var(--ink); padding-top:10px; }
+.week-grid input {
+  width:100%; min-width:68px; font-size:.68rem; font-weight:700;
+  padding:8px 6px; border-radius:10px; min-height:0;
+}
+.week-grid .cell-empty input { background:#faf8fc; color:var(--quiet); }
 .field { margin:10px 0; }
 .field label { display:block; font-size:.72rem; font-weight:800; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:.04em; }
 .progress { height:8px; background:var(--brand-soft); border-radius:99px; overflow:hidden; margin:10px 0; }
