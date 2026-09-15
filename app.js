@@ -120,7 +120,7 @@
       ["merenda","Merenda",d.merenda,d.merendaA]
     ].filter(function(x){ return x[2]; });
     var body = rows.length ? rows.map(function(x){
-      return "<div class=course><div class='ico svg-"+x[0]+"'>"+ICONS[x[0]]+"</div><div class=course-body><div class=label>"+x[1]+"</div><div class=dish>"+esc(x[2])+"</div><div class=hint>Tocca per gli allergeni</div></div>"+allergenBox(x[3])+"</div>";
+      return "<div class=course data-course="+x[0]+"><div class='ico svg-"+x[0]+"'>"+ICONS[x[0]]+"</div><div class=course-body><div class=label>"+x[1]+"</div><div class=dish>"+esc(x[2])+"</div><div class=hint>Tocca per gli allergeni</div></div>"+allergenBox(x[3])+"</div>";
     }).join("") : "<p class=status>Giorno vuoto. Tocca Correggi.</p>";
     return "<article class=meal-card><h2>"+DAYS.find(function(x){return x.id===dayId;}).label+" <button class=edit-btn data-edit="+weekIdx+":"+dayId+">Correggi</button></h2>"+body+"</article>";
   }
@@ -231,7 +231,7 @@
     var box = document.getElementById("screen-info");
     var list = state.menus.length
       ? "<h3 style='font-family:Fraunces,serif'>I tuoi menu</h3>"+state.menus.map(function(item){
-          return "<div class=allergen-row style='justify-content:space-between'><b>"+esc(item.name)+"</b><span><button class=edit-btn data-use="+item.id+">Apri</button> <button class='edit-btn btn-del' data-del="+item.id+">Elimina</button></span></div>";
+          return "<div class='allergen-row menu-row'><b>"+esc(item.name)+"</b><span><button class=edit-btn data-use="+item.id+">Apri</button> <button class='edit-btn btn-del' data-del="+item.id+">Elimina</button></span></div>";
         }).join("")
       : "<div class=note>Ancora nessun menu. Vai su Importa.</div>";
     box.innerHTML = tintCardHtml() + list;
@@ -331,30 +331,43 @@
     placeCellBar();
     setTimeout(function(){ inp.focus(); }, 40);
   }
-  function commitCellBar(){
-    if (!cellBarKey) { closeCellBar(); return; }
-    var p = cellBarKey.split(":");
-    var val = document.getElementById("cellBarInput").value.trim();
+  function applyCellValue(key, val, persist){
+    var p = String(key||"").split(":");
     var menu = currentMenu();
     if (menu && menu.weeks[p[0]] && menu.weeks[p[0]].days[p[1]]) {
       menu.weeks[p[0]].days[p[1]][p[2]] = val;
-      saveLibrary();
+      if (persist) saveLibrary();
     }
     if (window.__importNorm && window.__importNorm.weeks[p[0]]) {
       window.__importNorm.weeks[p[0]].days[p[1]][p[2]] = val;
     }
-    closeCellBar();
     var cellBtn = document.querySelector("[data-cell=\""+p[0]+":"+p[1]+":"+p[2]+"\"]");
     if (cellBtn) {
       cellBtn.textContent = val || "…";
       if (cellBtn.parentElement) cellBtn.parentElement.classList.toggle("cell-empty", !val);
     }
+    var dish = document.querySelector(".course[data-course=\""+p[2]+"\"] .dish");
+    if (dish && String(state.week)===String(p[0]) && state.day===p[1]) dish.textContent = val || "—";
+  }
+  function commitCellBar(){
+    if (!cellBarKey) { closeCellBar(); return; }
+    var val = document.getElementById("cellBarInput").value.trim();
+    applyCellValue(cellBarKey, val, true);
+    closeCellBar();
     if (document.getElementById("screen-settimane") && document.getElementById("screen-settimane").classList.contains("active")) {
       renderSettimane();
       bind();
     }
   }
   document.getElementById("cellBarOk").onclick = function(){ commitCellBar(); };
+  document.getElementById("cellBarClear").onclick = function(){
+    document.getElementById("cellBarInput").value = "";
+    if (cellBarKey) applyCellValue(cellBarKey, "", true);
+    document.getElementById("cellBarInput").focus();
+  };
+  document.getElementById("cellBarInput").addEventListener("input", function(){
+    if (cellBarKey) applyCellValue(cellBarKey, this.value, false);
+  });
   document.getElementById("cellBarInput").addEventListener("keydown", function(e){
     if (e.key === "Enter") { e.preventDefault(); commitCellBar(); }
   });
@@ -377,7 +390,7 @@
       '<div class="drop" style="margin-bottom:10px"><h3>Crea menu vuoto</h3><p>Parti dalla tabella e compila a mano. In alto cambi menu o torni qui.</p>' +
       '<div class="field" style="text-align:left"><label>Nome</label><input id="imp-name" placeholder="es. Menu settembre"></div>' +
       '<button class="btn btn-primary btn-wide" id="btnBlank">Crea e apri la tabella</button></div>' +
-      '<div class="meal-card"><h2>Da un AI</h2><p class="status">Copia il prompt, allegalo a foto o PDF in Gemini / ChatGPT / Claude, incolla il JSON.</p>' +
+      '<div class="meal-card"><h2>Da un AI</h2><p class="status">Copia il prompt e allegalo a foto o PDF in ChatGPT, Gemini, Copilot, Grok, Claude, Perplexity o un altra chat: vale ovunque accetti testo + file. Poi incolla qui il JSON.</p>' +
       '<div class="prompt-row"><span class="prompt-ph">Prompt 4 settimane</span><button type=button class="btn btn-ghost" id="copyPrompt">Copia</button></div>' +
       '<textarea id="promptBox" hidden>'+esc(AI_PROMPT)+"</textarea>" +
       '<div class="field"><label>JSON</label><textarea id="jsonPaste" placeholder="{ ... }"></textarea></div>' +

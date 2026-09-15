@@ -262,6 +262,9 @@ main { flex:1; overflow:auto; padding:6px 16px calc(var(--nav-h) + var(--safe-b)
 .note { background:#fff; border-radius:16px; padding:12px 14px; color:var(--muted); font-size:.82rem; font-weight:700; line-height:1.4; margin-top:8px; }
 .allergen-list { display:grid; gap:8px; }
 .allergen-row { display:flex; gap:10px; align-items:center; background:#fff; border-radius:20px; padding:12px 14px; box-shadow:var(--shadow); }
+.menu-row { margin:0 0 12px; align-items:center; }
+.menu-row b { flex:1; min-width:0; padding-right:8px; overflow:hidden; text-overflow:ellipsis; }
+.menu-row span { display:flex; gap:6px; flex-shrink:0; }
 .allergen-num { width:28px; height:28px; border-radius:10px; background:var(--merenda); color:var(--ink); display:grid; place-items:center; font-weight:800; font-size:.8rem; }
 .drop { border:2px dashed #d9cdef; background:#fff; border-radius:24px; padding:22px 16px; text-align:center; box-shadow:var(--shadow); }
 .drop h3 { margin:8px 0 4px; font-family:Fraunces,serif; }
@@ -286,9 +289,9 @@ textarea { min-height:140px; resize:vertical; }
 #importa-compact .btn-wide { margin-top:6px; }
 #importa-compact .meal-card h2 { font-size:1rem; }
 .cell-btn {
-  display:block; width:100%; min-width:64px; min-height:40px;
-  text-align:left; font-family:inherit; font-size:.68rem; font-weight:800;
-  padding:8px 6px; border:0; border-radius:10px; background:#fff;
+  display:block; width:100%; min-height:34px; max-height:34px;
+  text-align:left; font-family:inherit; font-size:.62rem; font-weight:800;
+  padding:7px 6px; border:0; border-radius:10px; background:#fff;
   color:var(--ink); box-shadow:inset 0 0 0 1px var(--line);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
@@ -301,8 +304,9 @@ textarea { min-height:140px; resize:vertical; }
 .cell-bar.open { display:block; }
 .cell-bar-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
 .cell-bar-top b { font-size:.78rem; }
+.cell-bar-actions { display:flex; gap:6px; }
 .cell-bar input { margin:0; }
-.cell-bar .btn { width:auto; padding:10px 16px; margin:0; }
+.cell-bar .btn { width:auto; padding:10px 14px; margin:0; }
 .prompt-row {
   display:flex; align-items:center; gap:8px; margin:10px 0 12px;
   background:#fff; border:1px solid var(--line); border-radius:16px; padding:8px 8px 8px 14px;
@@ -310,15 +314,17 @@ textarea { min-height:140px; resize:vertical; }
 .prompt-ph { flex:1; font-size:.78rem; font-weight:800; color:var(--muted); text-align:left; }
 .prompt-row .btn { margin:0; padding:10px 16px; width:auto; }
 .week-grid { overflow-x:auto; margin:8px 0 4px; -webkit-overflow-scrolling:touch; }
-.week-grid table { width:100%; border-collapse:separate; border-spacing:4px; min-width:420px; }
-.week-grid th { font-size:.62rem; font-weight:800; color:var(--muted); text-align:left; padding:0 2px; letter-spacing:.04em; text-transform:uppercase; }
-.week-grid td { padding:0; vertical-align:top; }
-.week-grid th.day { width:36px; color:var(--ink); padding-top:10px; }
-.week-grid input {
-  width:100%; min-width:68px; font-size:.68rem; font-weight:700;
-  padding:8px 6px; border-radius:10px; min-height:0;
+.week-grid table { width:100%; border-collapse:separate; border-spacing:4px; table-layout:fixed; min-width:360px; }
+.week-grid th { font-size:.58rem; font-weight:800; color:var(--muted); text-align:left; padding:0 2px; letter-spacing:.04em; text-transform:uppercase; }
+.week-grid td { padding:0; vertical-align:top; width:18%; }
+.week-grid th.day { width:28px; color:var(--ink); padding-top:8px; }
+.cell-btn {
+  display:block; width:100%; min-height:34px; max-height:34px;
+  text-align:left; font-family:inherit; font-size:.62rem; font-weight:800;
+  padding:7px 6px; border:0; border-radius:10px; background:#fff;
+  color:var(--ink); box-shadow:inset 0 0 0 1px var(--line);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.week-grid .cell-empty input { background:#faf8fc; color:var(--quiet); }
 .field { margin:10px 0; }
 .field label { display:block; font-size:.72rem; font-weight:800; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:.04em; }
 .progress { height:8px; background:var(--brand-soft); border-radius:99px; overflow:hidden; margin:10px 0; }
@@ -498,7 +504,10 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
 <div class="cell-bar" id="cellBar">
   <div class="cell-bar-top">
     <b id="cellBarMeta">Piatto</b>
-    <button type="button" class="btn btn-primary" id="cellBarOk">Ok</button>
+    <div class="cell-bar-actions">
+      <button type="button" class="btn btn-ghost" id="cellBarClear">Cancella</button>
+      <button type="button" class="btn btn-primary" id="cellBarOk">Ok</button>
+    </div>
   </div>
   <input id="cellBarInput" placeholder="Scrivi il piatto per intero">
 </div>
