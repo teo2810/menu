@@ -81,7 +81,7 @@
   }
   function allergenBox(codes){
     var list = parseCodes(codes);
-    if (!list.length) return "<div class='course-extra'><p class=status>Nessun allergene indicato su questa portata.</p></div>";
+    if (!list.length) return "<div class='course-extra'><p class=status>Nessun allergene.</p></div>";
     return "<div class='course-extra'><div class=label>Allergeni</div><div class=tags>" + list.map(function(n){
       return "<span class=tag>" + n + " · " + esc(ALLERGENS[n] || "") + "</span>";
     }).join("") + "</div></div>";
