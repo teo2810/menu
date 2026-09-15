@@ -4,8 +4,8 @@
   "description": "Importa menù da foto o file, dai un nome, consulta e correggi",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#F3EEF8",
-  "theme_color": "#F3EEF8",
+  "background_color": "#F2D6E4",
+  "theme_color": "#F2D6E4",
   "lang": "it",
   "orientation": "portrait",
   "icons": [

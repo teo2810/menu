@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
-<meta name="theme-color" content="#F3EEF8" />
+<meta name="theme-color" content="#F2D6E4" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Menu" />
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="v1" />
+<meta name="app-build" content="v2" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -35,7 +35,15 @@
   --safe-b:env(safe-area-inset-bottom,0px);
 }
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html,body { margin:0; height:100%; }
+html,body { margin:0; height:100%; background-color:#F2D6E4; }
+html {
+  background:
+    radial-gradient(820px 480px at 0% -10%, #f3c6d6 0%, transparent 55%),
+    radial-gradient(720px 420px at 110% 0%, #f3e3b4 0%, transparent 50%),
+    radial-gradient(640px 380px at 80% 110%, #b7e2d4 0%, transparent 55%),
+    radial-gradient(500px 300px at 10% 90%, #c9def6 0%, transparent 50%),
+    #F2D6E4;
+}
 body {
   font-family:Nunito,system-ui,sans-serif;
   background:
@@ -43,7 +51,7 @@ body {
     radial-gradient(720px 420px at 110% 0%, #f3e3b4 0%, transparent 50%),
     radial-gradient(640px 380px at 80% 110%, #b7e2d4 0%, transparent 55%),
     radial-gradient(500px 300px at 10% 90%, #c9def6 0%, transparent 50%),
-    var(--bg);
+    #F2D6E4;
   color:var(--ink); overflow:hidden;
 }
 .app { height:100dvh; display:flex; flex-direction:column; max-width:480px; margin:0 auto; position:relative; overflow:visible; }
@@ -105,17 +113,26 @@ main { flex:1; overflow:auto; padding:6px 16px calc(var(--nav-h) + var(--safe-b)
   display:flex; justify-content:space-between; align-items:center;
 }
 .edit-btn { background:#eadcf9; color:var(--brand-2); font-size:.72rem; padding:6px 10px; border-radius:999px; }
+.btn-del { background:#f6d0d6; color:#8b3b4a; }
+.btn-del:active { background:#efc0c8; }
 .course {
-  display:grid; grid-template-columns:48px 1fr; gap:10px 12px; padding:10px 0;
+  display:grid;
+  grid-template-columns:48px 1fr;
+  grid-template-rows:auto auto;
+  gap:4px 12px; padding:10px 0;
   border-top:1px solid var(--line); align-items:start; cursor:pointer;
 }
 .course:first-of-type { border-top:0; }
 .course .hint { font-size:.62rem; color:var(--muted); font-weight:700; margin-top:3px; }
-.course-extra { display:none; grid-column:2; padding:0; }
-.course.open { background:#faf7fd; border-radius:16px; margin:4px -8px; padding-left:8px; padding-right:8px; }
+.ico {
+  grid-column:1; grid-row:1;
+  width:48px; height:48px; border-radius:14px; display:grid; place-items:center;
+}
+.course-body { grid-column:2; grid-row:1; min-width:0; }
+.course-extra { display:none; grid-column:2; grid-row:2; padding:0; }
+.course.open { background:#faf7fd; border-radius:16px; }
 .course.open .course-extra { display:block; }
 .course.open .hint { display:none; }
-.ico { width:48px; height:48px; border-radius:14px; display:grid; place-items:center; flex-shrink:0; margin-top:1px; }
 .ico.svg-primo { background:#eadcf9; }
 .ico.svg-secondo { background:#f8d4c8; }
 .ico.svg-contorno { background:#c8ebd8; }
@@ -144,6 +161,7 @@ main { flex:1; overflow:auto; padding:6px 16px calc(var(--nav-h) + var(--safe-b)
 .btn { border-radius:14px; padding:12px 10px; font-size:.9rem; }
 .btn-primary { background:linear-gradient(135deg,#d9c7f2,#b7e2d4); color:#3d3554; }
 .btn-ghost { background:#f3e8fb; color:var(--ink); }
+.btn.btn-del { background:#f6d0d6; color:#8b3b4a; }
 .btn-wide { width:100%; margin-top:8px; }
 .preview-wrap img, .preview-wrap canvas { width:100%; border-radius:16px; display:block; margin:12px 0; }
 textarea, input:not(.menu-pick), select:not(.menu-pick) {
@@ -308,7 +326,7 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
     <p class="status" id="askText">Il menu verra rimosso da questo telefono.</p>
     <div class="ask-actions">
       <button class="btn btn-ghost" id="askNo">Annulla</button>
-      <button class="btn btn-primary" id="askOk">Elimina</button>
+      <button class="btn btn-del" id="askOk">Elimina</button>
     </div>
   </div>
 </div>
@@ -364,6 +382,6 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
   window.setTab("oggi");
 })();
 </script>
-<script src="app.js?v=1"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>

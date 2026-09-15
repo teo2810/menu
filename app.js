@@ -116,7 +116,7 @@
       ["merenda","Merenda",d.merenda,d.merendaA]
     ].filter(function(x){ return x[2]; });
     var body = rows.length ? rows.map(function(x){
-      return "<div class=course><div class='ico svg-"+x[0]+"'>"+ICONS[x[0]]+"</div><div><div class=label>"+x[1]+"</div><div class=dish>"+esc(x[2])+"</div><div class=hint>Tocca per gli allergeni</div></div>"+allergenBox(x[3])+"</div>";
+      return "<div class=course><div class='ico svg-"+x[0]+"'>"+ICONS[x[0]]+"</div><div class=course-body><div class=label>"+x[1]+"</div><div class=dish>"+esc(x[2])+"</div><div class=hint>Tocca per gli allergeni</div></div>"+allergenBox(x[3])+"</div>";
     }).join("") : "<p class=status>Giorno vuoto. Tocca Correggi.</p>";
     return "<article class=meal-card><h2>"+DAYS.find(function(x){return x.id===dayId;}).label+" <button class=edit-btn data-edit="+weekIdx+":"+dayId+">Correggi</button></h2>"+body+"</article>";
   }
@@ -169,7 +169,7 @@
     var box = document.getElementById("screen-info");
     if (!state.menus.length) { box.innerHTML = "<div class=note>Ancora nessun menu. Vai su Importa.</div>"; return; }
     box.innerHTML = "<h3 style='font-family:Fraunces,serif'>I tuoi menu</h3>"+state.menus.map(function(item){
-      return "<div class=allergen-row style='justify-content:space-between'><b>"+esc(item.name)+"</b><span><button class=edit-btn data-use="+item.id+">Apri</button> <button class=edit-btn data-del="+item.id+">Elimina</button></span></div>";
+      return "<div class=allergen-row style='justify-content:space-between'><b>"+esc(item.name)+"</b><span><button class=edit-btn data-use="+item.id+">Apri</button> <button class='edit-btn btn-del' data-del="+item.id+">Elimina</button></span></div>";
     }).join("");
   }
   function bind(){
