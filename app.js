@@ -165,12 +165,52 @@
     var copyBtn = document.getElementById("copyPrompt");
     if (copyBtn) copyBtn.onclick = function(){ copyPromptText(); };
   }
+  var TINTS = [
+    { id:"rosa", name:"Rosa", swatch:"#F6D4E0", theme:"#F6D4E0" },
+    { id:"cielo", name:"Cielo", swatch:"#A9C4E4", theme:"#D4E4F6" },
+    { id:"menta", name:"Menta", swatch:"#B5E4C8", theme:"#D4F0E4" },
+    { id:"limone", name:"Limone", swatch:"#F0E6A8", theme:"#F6F0D4" },
+    { id:"pesca", name:"Pesca", swatch:"#F0C8A8", theme:"#F6E0D4" },
+    { id:"corallo", name:"Corallo", swatch:"#F0A8B4", theme:"#F6D4DC" }
+  ];
+  function currentTintId(){
+    var id = "rosa";
+    try { id = localStorage.getItem("menu-tint-v1") || "rosa"; } catch (e) {}
+    for (var i=0;i<TINTS.length;i++) if (TINTS[i].id === id) return id;
+    return "rosa";
+  }
+  function applyTint(id){
+    var pack = null;
+    for (var i=0;i<TINTS.length;i++) if (TINTS[i].id === id) pack = TINTS[i];
+    if (!pack) pack = TINTS[0];
+    document.documentElement.setAttribute("data-tint", pack.id);
+    try { localStorage.setItem("menu-tint-v1", pack.id); } catch (e) {}
+    document.querySelectorAll("meta[name=theme-color]").forEach(function(m){ m.setAttribute("content", pack.theme); });
+    var blob = document.getElementById("tabBlob");
+    if (blob) blob.style.background = "var(--grad)";
+    var lab = document.getElementById("tintName");
+    if (lab) lab.textContent = pack.name;
+    document.querySelectorAll("[data-tint-pick]").forEach(function(b){
+      b.classList.toggle("on", b.getAttribute("data-tint-pick") === pack.id);
+    });
+  }
+  function tintCardHtml(){
+    var cur = currentTintId();
+    var name = "Rosa";
+    var dots = TINTS.map(function(t){
+      if (t.id === cur) name = t.name;
+      return "<button type=button class='tint-dot"+(t.id===cur?" on":"")+"' data-tint-pick="+t.id+" style='background:"+t.swatch+"' aria-label='"+t.name+"'></button>";
+    }).join("");
+    return "<div class='meal-card tint-card'><div class=tint-head><b>Tinta</b><span class=status id=tintName>"+name+"</span></div><div class=tint-rail>"+dots+"</div></div>";
+  }
   function renderInfo(){
     var box = document.getElementById("screen-info");
-    if (!state.menus.length) { box.innerHTML = "<div class=note>Ancora nessun menu. Vai su Importa.</div>"; return; }
-    box.innerHTML = "<h3 style='font-family:Fraunces,serif'>I tuoi menu</h3>"+state.menus.map(function(item){
-      return "<div class=allergen-row style='justify-content:space-between'><b>"+esc(item.name)+"</b><span><button class=edit-btn data-use="+item.id+">Apri</button> <button class='edit-btn btn-del' data-del="+item.id+">Elimina</button></span></div>";
-    }).join("");
+    var list = state.menus.length
+      ? "<h3 style='font-family:Fraunces,serif'>I tuoi menu</h3>"+state.menus.map(function(item){
+          return "<div class=allergen-row style='justify-content:space-between'><b>"+esc(item.name)+"</b><span><button class=edit-btn data-use="+item.id+">Apri</button> <button class='edit-btn btn-del' data-del="+item.id+">Elimina</button></span></div>";
+        }).join("")
+      : "<div class=note>Ancora nessun menu. Vai su Importa.</div>";
+    box.innerHTML = tintCardHtml() + list;
   }
   function bind(){
     document.querySelectorAll(".course").forEach(function(el){
@@ -182,6 +222,9 @@
     document.querySelectorAll("[data-edit]").forEach(function(b){ b.onclick = function(){ openEdit(b.getAttribute("data-edit")); }; });
     document.querySelectorAll("[data-week]").forEach(function(b){ b.onclick = function(){ state.week=+b.getAttribute("data-week"); renderSettimane(); bind(); }; });
     document.querySelectorAll("[data-day]").forEach(function(b){ b.onclick = function(){ state.day=b.getAttribute("data-day"); renderSettimane(); bind(); }; });
+    document.querySelectorAll("[data-tint-pick]").forEach(function(b){
+      b.onclick = function(){ applyTint(b.getAttribute("data-tint-pick")); };
+    });
     document.querySelectorAll("[data-use]").forEach(function(b){ b.onclick = function(){ state.activeId=b.getAttribute("data-use"); saveLibrary(); renderAll(); }; });
     document.querySelectorAll("[data-del]").forEach(function(b){
       b.onclick = function(){
@@ -509,5 +552,6 @@
   }
 
   if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(function(){});
+  applyTint(currentTintId());
   renderAll();
 })();

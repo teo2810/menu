@@ -13,11 +13,11 @@
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="v8" />
+<meta name="app-build" content="" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
-:root {
+:root, html[data-tint="rosa"] {
   --bg:#FDFBFD;
   --bg2:#F5F7FC;
   --card:#ffffff;
@@ -36,19 +36,91 @@
   --merenda:#D2EAFC;
   --line:#EDE6F6;
   --shadow:0 8px 22px rgba(46,26,71,.10);
+  --wash:#F6D4E0;
+  --wash-mid:rgba(246,212,224,.4);
+  --blob-a:#F8D5E4;
+  --blob-b:#E4D7FA;
+  --blob-c:#D8F0E4;
+  --wash-end:#F4F2FA;
+  --wash-tail:#EEF3F8;
   --nav-h:112px;
   --safe-b:env(safe-area-inset-bottom,0px);
+}
+html[data-tint="cielo"] {
+  --brand:#5B7DB8;
+  --brand-soft:#E7F0FB;
+  --grad:linear-gradient(135deg,#D4E4FC 0%, #D9F0FC 100%);
+  --line:#E4EEF6;
+  --wash:#D4E4F6;
+  --wash-mid:rgba(212,228,246,.4);
+  --blob-a:#D5E4F8;
+  --blob-b:#DCE4FA;
+  --blob-c:#D8F0E4;
+  --wash-end:#F2F6FA;
+  --wash-tail:#EEF3F8;
+}
+html[data-tint="menta"] {
+  --brand:#3E8A6E;
+  --brand-soft:#E5F7EE;
+  --grad:linear-gradient(135deg,#C8F0DC 0%, #D9FCE8 100%);
+  --line:#DCEEE4;
+  --wash:#D4F0E4;
+  --wash-mid:rgba(212,240,228,.4);
+  --blob-a:#D5F8E4;
+  --blob-b:#D7FAEE;
+  --blob-c:#D8EAF0;
+  --wash-end:#F2FAF6;
+  --wash-tail:#EEF8F4;
+}
+html[data-tint="limone"] {
+  --brand:#8A7A40;
+  --brand-soft:#FBF6E0;
+  --grad:linear-gradient(135deg,#FCEFD2 0%, #F8F6D0 100%);
+  --line:#EFE8D2;
+  --wash:#F6F0D4;
+  --wash-mid:rgba(246,240,212,.45);
+  --blob-a:#F8F5D5;
+  --blob-b:#FAF0D7;
+  --blob-c:#E8F0D8;
+  --wash-end:#FAF8F2;
+  --wash-tail:#F6F4EE;
+}
+html[data-tint="pesca"] {
+  --brand:#C47A5A;
+  --brand-soft:#FBECE4;
+  --grad:linear-gradient(135deg,#FCE3D2 0%, #FCD9C8 100%);
+  --line:#F0E4DC;
+  --wash:#F6E0D4;
+  --wash-mid:rgba(246,224,212,.4);
+  --blob-a:#F8DCD5;
+  --blob-b:#FADFD7;
+  --blob-c:#F0E8D8;
+  --wash-end:#FAF4F2;
+  --wash-tail:#F8F0EE;
+}
+html[data-tint="corallo"] {
+  --brand:#C45A72;
+  --brand-soft:#FBE8EE;
+  --grad:linear-gradient(135deg,#FCD9E0 0%, #FCC4C8 100%);
+  --line:#F0DCE2;
+  --wash:#F6D4DC;
+  --wash-mid:rgba(246,212,220,.4);
+  --blob-a:#F8D5DC;
+  --blob-b:#FAD7DE;
+  --blob-c:#F0D8E4;
+  --wash-end:#FAF2F4;
+  --wash-tail:#F8EEF0;
 }
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html,body {
   margin:0; height:100%;
-  background-color:#F6D4E0;
+  background-color:var(--wash);
   background-image:
-    linear-gradient(180deg,#F6D4E0 0px,#F6D4E0 48px,rgba(246,212,224,.4) 90px,rgba(246,212,224,0) 140px),
-    radial-gradient(880px 480px at 8% 12%, #F8D5E4 0%, transparent 56%),
-    radial-gradient(800px 460px at 100% 8%, #E4D7FA 0%, transparent 54%),
-    radial-gradient(700px 420px at 80% 110%, #D8F0E4 0%, transparent 58%),
-    linear-gradient(180deg,#F6D4E0 0%, #F4F2FA 55%, #EEF3F8 100%);
+    linear-gradient(180deg,var(--wash) 0px,var(--wash) 48px,var(--wash-mid) 90px,transparent 140px),
+    radial-gradient(880px 480px at 8% 12%, var(--blob-a) 0%, transparent 56%),
+    radial-gradient(800px 460px at 100% 8%, var(--blob-b) 0%, transparent 54%),
+    radial-gradient(700px 420px at 80% 110%, var(--blob-c) 0%, transparent 58%),
+    linear-gradient(180deg,var(--wash) 0%, var(--wash-end) 55%, var(--wash-tail) 100%);
   background-attachment:fixed;
 }
 body {
@@ -162,7 +234,7 @@ main { flex:1; overflow:auto; padding:6px 16px calc(var(--nav-h) + var(--safe-b)
 .tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
 .tag { font-size:.65rem; font-weight:800; background:var(--brand-soft); color:var(--brand); border-radius:999px; padding:2px 8px; }
 .hero-today {
-  background:linear-gradient(135deg,#E2D9FC 0%, #FCD9E6 100%);
+  background:var(--grad);
   color:var(--ink); border-radius:24px; padding:16px 16px; margin-bottom:12px; box-shadow:var(--shadow);
 }
 .hero-today .kicker { opacity:.8; font-weight:800; font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; }
@@ -214,7 +286,7 @@ nav.tabbar ul {
 nav.tabbar .blob {
   position:absolute; top:0; left:12.5%;
   width:56px; height:56px; margin-left:-28px;
-  background:linear-gradient(135deg,#E2D9FC 0%, #FCD9E6 100%);
+  background:var(--grad);
   border-radius:50%;
   box-shadow:0 10px 22px rgba(122,90,160,.34), 0 4px 10px rgba(46,26,71,.10), inset 0 3px 8px rgba(255,255,255,.55);
   z-index:2; pointer-events:none;
@@ -277,7 +349,35 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
 }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 .empty { text-align:center; padding:28px 12px; }
+.tint-card { margin-bottom:14px; }
+.tint-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.tint-head b { font-family:Fraunces,serif; font-size:1.12rem; }
+.tint-rail {
+  display:flex; align-items:center; gap:8px;
+  background:#fff; border-radius:999px; padding:8px 10px;
+  box-shadow:inset 0 0 0 1px var(--line);
+}
+.tint-dot {
+  flex:1; height:36px; border:0; padding:0; border-radius:999px; cursor:pointer;
+  box-shadow:inset 0 -1px 0 rgba(46,26,71,.06);
+  transform:scale(1); transition:transform .28s cubic-bezier(.3,1.4,.4,1), box-shadow .2s ease;
+}
+.tint-dot.on {
+  transform:scale(1.12);
+  box-shadow:0 0 0 3px #fff, 0 0 0 5px var(--brand), 0 6px 14px rgba(46,26,71,.16);
+}
 </style>
+<script>
+(function(){
+  var ok = {rosa:1,cielo:1,menta:1,limone:1,pesca:1,corallo:1};
+  var id = "rosa";
+  try { id = localStorage.getItem("menu-tint-v1") || "rosa"; } catch (e) {}
+  if (!ok[id]) id = "rosa";
+  document.documentElement.setAttribute("data-tint", id);
+  var hex = {rosa:"#F6D4E0",cielo:"#D4E4F6",menta:"#D4F0E4",limone:"#F6F0D4",pesca:"#F6E0D4",corallo:"#F6D4DC"};
+  document.querySelectorAll("meta[name=theme-color]").forEach(function(m){ m.setAttribute("content", hex[id]); });
+})();
+</script>
 </head>
 <body>
 <div class="app">
@@ -352,7 +452,7 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
 <script>
 (function(){
   var list = document.getElementById("tabList");
-  var TAB_THEME = { bg:"linear-gradient(135deg,#E2D9FC 0%, #FCD9E6 100%)", ink:"#2E1A47" };
+  var TAB_THEME = { bg:"var(--grad)", ink:"#2E1A47" };
   function place(){
     var on = list.querySelector("li.on");
     var blob = document.getElementById("tabBlob");
@@ -398,6 +498,6 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
   window.setTab("oggi");
 })();
 </script>
-<script src="app.js?v=8"></script>
+<script src="app.js"></script>
 </body>
 </html>
