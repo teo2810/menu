@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
-<meta name="theme-color" content="#F7EEF4" />
-<meta name="theme-color" media="(display-mode: standalone)" content="#F7EEF4" />
+<meta name="theme-color" content="#F4E8EF" />
+<meta name="theme-color" media="(display-mode: standalone)" content="#F4E8EF" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -13,7 +13,7 @@
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="v6" />
+<meta name="app-build" content="v7" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -35,19 +35,20 @@
   --frutta:#FCF2D2;
   --merenda:#D2EAFC;
   --line:#EDE6F6;
-  --shadow:0 8px 24px rgba(46,26,71,.07);
+  --shadow:0 8px 22px rgba(46,26,71,.10);
   --nav-h:112px;
   --safe-b:env(safe-area-inset-bottom,0px);
 }
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html,body {
   margin:0; height:100%;
-  background-color:#F7EEF4;
+  background-color:#F4E8EF;
   background-image:
-    radial-gradient(900px 520px at 6% -22%, #F8D5E4 0%, transparent 58%),
-    radial-gradient(820px 500px at 100% -16%, #E4D7FA 0%, transparent 54%),
+    linear-gradient(180deg,#F4E8EF 0px,#F4E8EF 36px,rgba(244,232,239,.35) 72px,rgba(244,232,239,0) 120px),
+    radial-gradient(880px 480px at 8% 8%, #F8D5E4 0%, transparent 56%),
+    radial-gradient(800px 460px at 100% 4%, #E4D7FA 0%, transparent 54%),
     radial-gradient(700px 420px at 80% 110%, #D8F0E4 0%, transparent 58%),
-    linear-gradient(180deg,#F7EEF4 0%, #F4F2FA 55%, #EEF3F8 100%);
+    linear-gradient(180deg,#F4E8EF 0%, #F4F2FA 55%, #EEF3F8 100%);
   background-attachment:fixed;
 }
 body {
@@ -86,7 +87,7 @@ header.top {
 .pill {
   background:#fff; border:0; border-radius:999px;
   padding:6px 12px; font-size:.72rem; font-weight:800; color:var(--brand);
-  box-shadow:var(--shadow); white-space:nowrap;
+  box-shadow:0 6px 16px rgba(46,26,71,.12); white-space:nowrap;
 }
 main { flex:1; overflow:auto; padding:6px 16px calc(var(--nav-h) + var(--safe-b) + 18px); }
 .screen { display:none; animation:rise .35s ease; }
@@ -97,13 +98,13 @@ main { flex:1; overflow:auto; padding:6px 16px calc(var(--nav-h) + var(--safe-b)
 .week-tab, .day-chip, .edit-btn, .btn { border:0; font-family:inherit; font-weight:800; }
 .week-tab {
   flex:0 0 auto; background:#fff; color:var(--quiet); font-size:.8rem;
-  padding:9px 16px; border-radius:999px; box-shadow:var(--shadow);
+  padding:9px 16px; border-radius:999px; box-shadow:0 6px 16px rgba(46,26,71,.11);
 }
 .week-tab.on { background:var(--grad); color:var(--ink); }
 .day-rail { display:flex; gap:8px; margin-bottom:14px; }
 .day-chip {
   flex:1; background:#fff; border-radius:20px; padding:8px 0 7px;
-  box-shadow:var(--shadow); color:var(--quiet);
+  box-shadow:0 6px 16px rgba(46,26,71,.11); color:var(--quiet);
 }
 .day-chip small { display:block; font-size:.62rem; letter-spacing:.04em; }
 .day-chip b { font-size:.95rem; }
@@ -134,8 +135,13 @@ main { flex:1; overflow:auto; padding:6px 16px calc(var(--nav-h) + var(--safe-b)
 }
 .course-body { grid-column:2; grid-row:1; min-width:0; }
 .course-extra { display:none; grid-column:2; grid-row:2; padding:0; }
-.course.open { background:var(--brand-soft); border-radius:18px; }
-.course.open .course-extra { display:block; }
+.course.open {
+  background:var(--brand-soft);
+  border-radius:24px;
+  padding:12px;
+  box-shadow:0 8px 18px rgba(46,26,71,.08);
+}
+.course.open .course-extra { display:block; margin-top:2px; }
 .course.open .hint { display:none; }
 .ico.svg-primo { background:var(--primo); }
 .ico.svg-secondo { background:var(--secondo); }
@@ -202,7 +208,7 @@ nav.tabbar .blob {
   width:56px; height:56px; margin-left:-28px;
   background:linear-gradient(135deg,#E2D9FC 0%, #FCD9E6 100%);
   border-radius:50%;
-  box-shadow:0 8px 16px -4px rgba(140,110,170,.22), inset 0 3px 8px rgba(255,255,255,.45);
+  box-shadow:0 10px 22px rgba(122,90,160,.34), 0 4px 10px rgba(46,26,71,.10), inset 0 3px 8px rgba(255,255,255,.55);
   z-index:2; pointer-events:none;
   transition:left .5s cubic-bezier(.3,1.4,.4,1);
 }
@@ -384,6 +390,6 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
   window.setTab("oggi");
 })();
 </script>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

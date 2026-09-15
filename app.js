@@ -243,7 +243,7 @@
       '<button class="btn btn-ghost btn-wide" id="btnBlank">Crea menu vuoto da compilare</button>' +
       '<div class="meal-card" style="margin-top:14px">' +
         '<h2>Importa da JSON</h2>' +
-        '<p class="status">Hai gia un JSON pronto (anche generato con un\'altra AI)? Caricalo qui.</p>' +
+        '<p class="status">Hai gia un JSON pronto? Caricalo qui.</p>' +
         '<button class="btn btn-ghost btn-wide" id="btnJsonFile">Carica file .json</button>' +
         '<input id="fileJson" type="file" accept=".json,application/json" hidden>' +
         '<div class="field"><label>Oppure incolla il JSON</label><textarea id="jsonPaste" placeholder="{ ... }"></textarea></div>' +
