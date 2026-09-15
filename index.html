@@ -11,7 +11,7 @@
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="v2" />
+<meta name="app-build" content="v3" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -36,8 +36,9 @@
 }
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html,body { margin:0; height:100%; background-color:#F2D6E4; }
-html {
+html,body {
   background:
+    linear-gradient(180deg,#F2D6E4 0px,#F2D6E4 22px,rgba(242,214,228,.55) 48px,rgba(242,214,228,0) 96px),
     radial-gradient(820px 480px at 0% -10%, #f3c6d6 0%, transparent 55%),
     radial-gradient(720px 420px at 110% 0%, #f3e3b4 0%, transparent 50%),
     radial-gradient(640px 380px at 80% 110%, #b7e2d4 0%, transparent 55%),
@@ -46,12 +47,6 @@ html {
 }
 body {
   font-family:Nunito,system-ui,sans-serif;
-  background:
-    radial-gradient(820px 480px at 0% -10%, #f3c6d6 0%, transparent 55%),
-    radial-gradient(720px 420px at 110% 0%, #f3e3b4 0%, transparent 50%),
-    radial-gradient(640px 380px at 80% 110%, #b7e2d4 0%, transparent 55%),
-    radial-gradient(500px 300px at 10% 90%, #c9def6 0%, transparent 50%),
-    #F2D6E4;
   color:var(--ink); overflow:hidden;
 }
 .app { height:100dvh; display:flex; flex-direction:column; max-width:480px; margin:0 auto; position:relative; overflow:visible; }
@@ -59,6 +54,8 @@ header.top {
   padding:calc(12px + env(safe-area-inset-top,0px)) 18px 10px;
   display:flex; align-items:flex-end; justify-content:space-between; gap:12px;
 }
+.app.nohead header.top { display:none; }
+.app.nohead main { padding-top:calc(8px + env(safe-area-inset-top,0px)); }
 .brand-block h1 { font-family:Fraunces,serif; font-size:1.35rem; margin:0; letter-spacing:-.02em; }
 .menu-pick {
   appearance:none; -webkit-appearance:none;
@@ -367,6 +364,8 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
       blob.classList.add("jump");
       setTimeout(function(){ blob.classList.remove("jump"); }, 520);
     }
+    var app = document.querySelector(".app");
+    if (app) app.classList.toggle("nohead", name === "importa" || name === "info");
     requestAnimationFrame(place);
   };
   list.addEventListener("click", function(e){
@@ -382,6 +381,6 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
   window.setTab("oggi");
 })();
 </script>
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>
