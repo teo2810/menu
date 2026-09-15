@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
-<meta name="theme-color" content="#F2D6E4" />
+<meta name="theme-color" content="#EEE6F0" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Menu" />
@@ -11,12 +11,12 @@
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="v3" />
+<meta name="app-build" content="v4" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
 :root {
-  --bg:#f3eef8;
+  --bg:#efeaf4;
   --card:#fffdfb;
   --ink:#3d3554;
   --muted:#8b8296;
@@ -35,15 +35,15 @@
   --safe-b:env(safe-area-inset-bottom,0px);
 }
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html,body { margin:0; height:100%; background-color:#F2D6E4; }
+html,body { margin:0; height:100%; background-color:#EEE6F0; }
 html,body {
   background:
-    linear-gradient(180deg,#F2D6E4 0px,#F2D6E4 22px,rgba(242,214,228,.55) 48px,rgba(242,214,228,0) 96px),
-    radial-gradient(820px 480px at 0% -10%, #f3c6d6 0%, transparent 55%),
-    radial-gradient(720px 420px at 110% 0%, #f3e3b4 0%, transparent 50%),
-    radial-gradient(640px 380px at 80% 110%, #b7e2d4 0%, transparent 55%),
-    radial-gradient(500px 300px at 10% 90%, #c9def6 0%, transparent 50%),
-    #F2D6E4;
+    linear-gradient(180deg,#EEE6F0 0px,#EEE6F0 20px,rgba(238,230,240,.45) 52px,rgba(238,230,240,0) 100px),
+    radial-gradient(640px 380px at 8% -8%, rgba(243,198,214,.55) 0%, transparent 58%),
+    radial-gradient(700px 420px at 108% 2%, rgba(243,227,180,.7) 0%, transparent 52%),
+    radial-gradient(620px 360px at 88% 108%, rgba(183,226,212,.7) 0%, transparent 56%),
+    radial-gradient(520px 300px at 6% 92%, rgba(201,222,246,.65) 0%, transparent 52%),
+    #efeaf4;
 }
 body {
   font-family:Nunito,system-ui,sans-serif;
@@ -185,9 +185,9 @@ nav.tabbar ul {
   list-style:none; margin:0; padding:0;
   position:absolute; left:0; right:0; bottom:0; height:64px;
   display:grid; grid-template-columns:repeat(4,1fr);
-  background:var(--bar);
+  background:#fff;
   border-radius:32px;
-  box-shadow:0 14px 34px rgba(120,90,150,.14);
+  box-shadow:0 16px 36px rgba(70,45,100,.2);
   pointer-events:auto; overflow:visible;
 }
 nav.tabbar .blob {
@@ -195,7 +195,7 @@ nav.tabbar .blob {
   width:56px; height:56px; margin-left:-28px;
   background:var(--blob-bg,#d9c7f2);
   border-radius:50%;
-  box-shadow:0 8px 16px -4px rgba(60,40,90,.28), inset 0 4px 8px rgba(255,255,255,.35);
+  box-shadow:0 10px 18px -3px rgba(40,20,70,.34), inset 0 4px 8px rgba(255,255,255,.4);
   z-index:2; pointer-events:none;
   transition:left .5s cubic-bezier(.3,1.4,.4,1), background-color .45s ease;
 }
@@ -209,7 +209,7 @@ nav.tabbar .blob.jump { animation:blobSquash .5s cubic-bezier(.3,1.4,.4,1); }
 nav.tabbar li { display:flex; position:relative; }
 nav.tabbar a {
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
-  padding-bottom:8px; text-decoration:none; color:#8b8296; font-size:.66rem; font-weight:800;
+  padding-bottom:8px; text-decoration:none; color:#5f566c; font-size:.66rem; font-weight:800;
   position:relative; z-index:3;
 }
 nav.tabbar a .dot {
@@ -220,12 +220,12 @@ nav.tabbar a .dot {
 }
 nav.tabbar a .dot img {
   width:28px; height:28px; object-fit:contain; display:block;
-  filter:grayscale(1) contrast(.9) brightness(1.08);
-  opacity:.62;
+  filter:grayscale(1) contrast(1.08) brightness(.92);
+  opacity:.78;
   transform:scale(1);
   transition:filter .32s ease, opacity .32s ease, transform .5s cubic-bezier(.3,1.4,.4,1), width .35s ease, height .35s ease;
 }
-nav.tabbar li.on a { color:#1f1a2e; }
+nav.tabbar li.on a { color:#161221; }
 nav.tabbar li.on a .dot {
   top:-28px;
   width:56px; height:56px;
@@ -381,6 +381,6 @@ nav.tabbar li.on.pop a .dot img { animation:iconPop .5s cubic-bezier(.3,1.4,.4,1
   window.setTab("oggi");
 })();
 </script>
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

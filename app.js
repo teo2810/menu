@@ -250,7 +250,7 @@
         '<button class="btn btn-primary btn-wide" id="applyJsonPaste">Importa JSON incollato</button>' +
       '</div>' +
       '<div class="meal-card" style="margin-top:14px">' +
-        '<h2>Riconoscimento debole? Usa un\'altra AI</h2>' +
+        '<h2>Riconoscimento debole? Usa un AI</h2>' +
         '<p class="status">Se qui il testo non viene letto bene, apri un\'app AI che legge le immagini (es. Claude, ChatGPT, Gemini), incolla questo prompt insieme alla foto del menu, poi copia la risposta JSON e importala qui sopra.</p>' +
         '<div class="field"><label>Prompt da copiare</label><textarea id="promptBox" readonly>'+esc(AI_PROMPT)+'</textarea></div>' +
         '<button class="btn btn-ghost btn-wide" id="copyPrompt">Copia prompt</button>' +
