@@ -185,7 +185,7 @@
     if (!pack) pack = TINTS[0];
     document.documentElement.setAttribute("data-tint", pack.id);
     try { localStorage.setItem("menu-tint-v1", pack.id); } catch (e) {}
-    document.querySelectorAll("meta[name=theme-color]").forEach(function(m){ m.setAttribute("content", pack.theme); });
+    if (window.paintStatusBar) window.paintStatusBar(pack.theme);
     var blob = document.getElementById("tabBlob");
     if (blob) blob.style.background = "var(--grad)";
     var lab = document.getElementById("tintName");
