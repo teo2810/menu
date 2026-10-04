@@ -11,6 +11,9 @@
   var API_BASE = "https://menu-api.teofalce.workers.dev";
   var OFFICIAL_INDEX = "./data/menus.json";
   var OFFICIAL_STORE = "menu-official-cache-v1";
+  var CLOUD_KEY_STORE = "menu-cloud-key-v1";
+  var CLOUD_META_STORE = "menu-cloud-meta-v1";
+  var cloudRevision = 0, cloudApplying = false, cloudTimer = null, cloudBusy = false;
 
   function loadOfficialCache(){
     try { return JSON.parse(localStorage.getItem(OFFICIAL_STORE) || "[]"); } catch(e) { return []; }
@@ -119,7 +122,71 @@
   }
   var lib = loadLibrary();
   var state = { menus:lib.menus, activeId:lib.activeId, week:0, day:"lunedi", edit:null };
-  function saveLibrary(){ localStorage.setItem(STORE, JSON.stringify({ menus:state.menus, activeId:state.activeId })); }
+  function saveLibrary(){
+    localStorage.setItem(STORE, JSON.stringify({ menus:state.menus, activeId:state.activeId }));
+    if (!cloudApplying && getCloudKey()) queueCloudSave();
+  }
+  function getCloudKey(){ try{return (localStorage.getItem(CLOUD_KEY_STORE)||"").trim();}catch(e){return "";} }
+  function getCloudMeta(){ try{return JSON.parse(localStorage.getItem(CLOUD_META_STORE)||"null")||{};}catch(e){return {};} }
+  function setCloudMeta(x){ try{localStorage.setItem(CLOUD_META_STORE,JSON.stringify(x||{}));}catch(e){} }
+  async function fingerprint(obj){
+    var data=new TextEncoder().encode(JSON.stringify(obj));
+    var hash=await crypto.subtle.digest("SHA-256",data);
+    return Array.from(new Uint8Array(hash)).map(function(b){return b.toString(16).padStart(2,"0");}).join("");
+  }
+  async function cloudRequest(method,payload){
+    var key=getCloudKey(); if(!key) throw new Error("Chiave sync mancante");
+    var opt={method:method,headers:{"X-Menu-Key":key,"Content-Type":"application/json"},cache:"no-store"};
+    if(payload) opt.body=JSON.stringify(payload);
+    var r=await fetch(API_BASE+"/api/library",opt), d={}; try{d=await r.json();}catch(e){}
+    if(r.status===401) throw new Error("Chiave sync non valida");
+    if(!r.ok) { var er=new Error(d.error||("HTTP "+r.status)); er.status=r.status; er.data=d; throw er; }
+    return d;
+  }
+  function uniqueId(base,used){ var id=base||("menu-"+Date.now()); var n=1; while(used[id]) id=(base||"menu")+"-locale-"+(n++); used[id]=1; return id; }
+  function mergeCloudPayload(local,remote){
+    var out=[], used={};
+    (remote.menus||[]).forEach(function(m){out.push(m);used[m.id]=1;});
+    (local.menus||[]).forEach(function(m){
+      var r=out.find(function(x){return x.id===m.id;});
+      if(!r){out.push(m);used[m.id]=1;return;}
+      if(JSON.stringify(r)===JSON.stringify(m)) return;
+      var copy=JSON.parse(JSON.stringify(m)); copy.id=uniqueId(m.id,used); copy.name=(copy.name||"Menu")+" (copia locale)"; out.push(copy);
+    });
+    var active=local.activeId && out.some(function(m){return m.id===local.activeId;}) ? local.activeId : (remote.activeId|| (out[0]&&out[0].id)||null);
+    return {kind:"menu-library",version:2,menus:out,activeId:active};
+  }
+  function applyCloudPayload(p){
+    cloudApplying=true;
+    try{ state.menus=Array.isArray(p.menus)?p.menus:[]; state.activeId=p.activeId&&state.menus.some(function(m){return m.id===p.activeId;})?p.activeId:(state.menus[0]&&state.menus[0].id)||null; saveLibrary(); }
+    finally{cloudApplying=false;}
+  }
+  async function syncCloud(silent){
+    if(cloudBusy||!getCloudKey()||!navigator.onLine) return; cloudBusy=true;
+    try{
+      var remote=await cloudRequest("GET"), local=libraryPayload(), meta=getCloudMeta();
+      cloudRevision=remote.revision||0; var localFp=await fingerprint(local);
+      if(!cloudRevision){
+        var created=await cloudRequest("PUT",Object.assign({},local,{baseRevision:0})); cloudRevision=created.revision||1; setCloudMeta({revision:cloudRevision,fingerprint:localFp});
+      } else if(meta.revision===cloudRevision && meta.fingerprint===localFp){
+        // already aligned
+      } else if(meta.revision===cloudRevision && meta.fingerprint && meta.fingerprint!==localFp){
+        var pushed=await cloudRequest("PUT",Object.assign({},local,{baseRevision:cloudRevision})); cloudRevision=pushed.revision; setCloudMeta({revision:cloudRevision,fingerprint:localFp});
+      } else if(meta.fingerprint===localFp){
+        applyCloudPayload(remote); var rf=await fingerprint(libraryPayload()); setCloudMeta({revision:cloudRevision,fingerprint:rf}); renderAll();
+      } else {
+        var merged=mergeCloudPayload(local,remote); applyCloudPayload(merged); var mf=await fingerprint(libraryPayload());
+        var saved=await cloudRequest("PUT",Object.assign({},libraryPayload(),{baseRevision:cloudRevision})); cloudRevision=saved.revision; setCloudMeta({revision:cloudRevision,fingerprint:mf}); renderAll();
+      }
+      if(!silent) toast("Menu sincronizzati");
+    }catch(e){ if(!silent) toast(e.message||"Sync non riuscita"); }finally{cloudBusy=false; renderCloudStatus();}
+  }
+  function queueCloudSave(){ clearTimeout(cloudTimer); cloudTimer=setTimeout(function(){syncCloud(true);},900); }
+  function renderCloudStatus(){ var el=document.getElementById("cloudStatus"); if(!el)return; el.textContent=!getCloudKey()?"Non attiva":(!navigator.onLine?"Offline · modifiche salvate sul dispositivo":(cloudBusy?"Sincronizzazione…":"Attiva")); }
+  function cloudCardHtml(){
+    var on=!!getCloudKey();
+    return "<div class='meal-card cloud-card'><h2>Sincronizzazione</h2><p class=status id=cloudStatus>"+(on?"Attiva":"Non attiva")+"</p>"+(on?"<div class=actions><button type=button class='btn btn-primary' id=cloudSync>Sincronizza ora</button><button type=button class='btn btn-ghost' id=cloudDisconnect>Disconnetti</button></div>":"<div class=field><label>Chiave privata</label><input id=cloudKey type=password autocomplete=off placeholder='Chiave MENU_SYNC_KEY'></div><button type=button class='btn btn-primary btn-wide' id=cloudConnect>Attiva sincronizzazione</button>")+"</div>";
+  }
   function currentMenu(){ return state.menus.find(function(m){ return m.id === state.activeId; }) || state.menus[0] || null; }
   function esc(s){
     return String(s || "").replace(/&/g,"&"+"amp;").replace(/</g,"&"+"lt;").replace(/>/g,"&"+"gt;").replace(/"/g,"&"+"quot;");
@@ -434,7 +501,7 @@
             "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M4 7h16'/><path d='M9 7V5h6v2'/><path d='M7 7l1 13h8l1-13'/></svg></button></span></div>";
         }).join("")
       : "<div class=note>Ancora nessun menu. Vai su Importa.</div>";
-    box.innerHTML = tintCardHtml() + menuSettingsCardHtml() + '<div class="meal-card compact-tools"><h2>Dati menu</h2><p class="status">Backup ed esportazione in un unico punto.</p><div class="actions"><button type="button" class="btn btn-primary" data-save-copy>Salva copia</button><button type="button" class="btn btn-ghost" data-load-copy>Carica copia</button></div>'+exportCardHtml().replace('<div class="meal-card">','<div class="embedded-export">')+'<input id="fileLibrary" type="file" accept=".json,application/json" hidden></div>' + reportCardHtml() + list;
+    box.innerHTML = tintCardHtml() + cloudCardHtml() + menuSettingsCardHtml() + '<div class="meal-card compact-tools"><h2>Dati menu</h2><p class="status">Backup ed esportazione in un unico punto.</p><div class="actions"><button type="button" class="btn btn-primary" data-save-copy>Salva copia</button><button type="button" class="btn btn-ghost" data-load-copy>Carica copia</button></div>'+exportCardHtml().replace('class="meal-card export-card"','class="embedded-export export-card"')+'<input id="fileLibrary" type="file" accept=".json,application/json" hidden></div>' + reportCardHtml() + list;
   }
   function bind(){
     var saveMenuSettings=document.getElementById("saveMenuSettings");
@@ -463,6 +530,17 @@
       try{await submitReport(m.id,(contextEl&&contextEl.value||"").trim(),message,websiteEl&&websiteEl.value||""); if(messageEl)messageEl.value=""; if(contextEl)contextEl.value=""; toast("Segnalazione inviata");}
       catch(e){toast(e.message||"Invio non riuscito");} finally{sendReport.disabled=false;sendReport.textContent=old;}
     };
+
+    var cloudConnect=document.getElementById("cloudConnect");
+    if(cloudConnect) cloudConnect.onclick=async function(){
+      var inp=document.getElementById("cloudKey"), key=(inp&&inp.value||"").trim(); if(key.length<16){toast("Chiave troppo corta");return;}
+      localStorage.setItem(CLOUD_KEY_STORE,key); localStorage.removeItem(CLOUD_META_STORE);
+      try{await cloudRequest("GET"); await syncCloud(false); renderAll();}
+      catch(e){localStorage.removeItem(CLOUD_KEY_STORE);localStorage.removeItem(CLOUD_META_STORE);toast(e.message||"Chiave non valida");renderAll();}
+    };
+    var cloudSync=document.getElementById("cloudSync"); if(cloudSync) cloudSync.onclick=function(){syncCloud(false);};
+    var cloudDisconnect=document.getElementById("cloudDisconnect"); if(cloudDisconnect) cloudDisconnect.onclick=function(){localStorage.removeItem(CLOUD_KEY_STORE);localStorage.removeItem(CLOUD_META_STORE);cloudRevision=0;renderAll();toast("Dispositivo disconnesso");};
+    renderCloudStatus();
 
     document.querySelectorAll(".course").forEach(function(el){
       el.onclick = function(e){
@@ -501,7 +579,7 @@
     document.querySelectorAll("[data-del]").forEach(function(b){
       b.onclick = function(){
         var id = b.getAttribute("data-del");
-        ask("Eliminare questo menu?", "Verra rimosso solo da questo telefono.", "Elimina", function(){
+        ask("Eliminare questo menu?", getCloudKey()?"Verrà eliminato anche dalla libreria sincronizzata.":"Verrà rimosso solo da questo dispositivo.", "Elimina", function(){
           state.menus = state.menus.filter(function(x){ return x.id !== id; });
           state.activeId = state.menus[0] && state.menus[0].id;
           saveLibrary();
@@ -676,7 +754,6 @@
       '<div class="field"><label>JSON</label><textarea id="jsonPaste" placeholder="{ ... }"></textarea></div>' +
       '<div class="actions"><button class="btn btn-primary" id="applyJsonPaste">Importa JSON</button><button class="btn btn-ghost" id="btnJsonFile">File .json</button></div>' +
       '<input id="fileJson" type="file" accept=".json,application/json" hidden></div>' +
-      '<input id="fileLibrary" type="file" accept=".json,application/json" hidden>' +
       '</div>';
   }
 
@@ -1477,4 +1554,7 @@
   applyTint(currentTintId());
   renderAll();
   syncOfficialMenus();
+  window.addEventListener("online",function(){renderCloudStatus();if(getCloudKey())syncCloud(true);});
+  window.addEventListener("offline",renderCloudStatus);
+  if(getCloudKey()) syncCloud(true);
 })();
