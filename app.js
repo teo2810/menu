@@ -93,7 +93,7 @@
     return day;
   }
   function aKeyOf(course){ return course + "A"; }
-  function emptyDays(){ var o={}; DAYS.forEach(function(d){ o[d.id]=meal(); }); return o; }
+  function emptyDays(sections){ var o={}; DAYS.forEach(function(d){ o[d.id]=meal(sections); }); return o; }
   function makeMenu(p){
     p = p || {};
     return {
@@ -262,43 +262,6 @@
   }
 
   function renderHeader(){
-
-    var saveMenuSettings=document.getElementById("saveMenuSettings");
-    if(saveMenuSettings) saveMenuSettings.onclick=function(){
-      var m=currentMenu(); if(!m) return;
-      m.type=document.getElementById("menuType").value;
-      m.period=document.getElementById("menuPeriod").value.trim();
-      m.validFrom=document.getElementById("menuValidFrom").value;
-      m.validTo=document.getElementById("menuValidTo").value;
-      var cm=document.getElementById("menuCycle").value;
-      m.cycle={mode:cm,weeks:cm==="single"?1:Math.max(1,(m.weeks||[]).length)};
-      var labels=document.getElementById("menuSections").value.split(",").map(function(x){return x.trim();}).filter(Boolean);
-      if(labels.length) m.sections=labels.map(function(label,i){
-        return {id:sectionId(label,i),label:label};
-      });
-      saveLibrary(); renderAll(); toast("Impostazioni salvate");
-    };
-    var sendReport = document.getElementById("sendReport");
-    if (sendReport) sendReport.onclick = async function(){
-      var m = currentMenu();
-      var contextEl = document.getElementById("reportContext");
-      var messageEl = document.getElementById("reportMessage");
-      var websiteEl = document.getElementById("reportWebsite");
-      var message = (messageEl && messageEl.value || "").trim();
-      if (!m || message.length < 3) { toast("Scrivi una segnalazione"); return; }
-      var old = sendReport.textContent;
-      sendReport.disabled = true; sendReport.textContent = "Invio...";
-      try {
-        await submitReport(m.id, (contextEl && contextEl.value || "").trim(), message, websiteEl && websiteEl.value || "");
-        if (messageEl) messageEl.value = "";
-        if (contextEl) contextEl.value = "";
-        toast("Segnalazione inviata");
-      } catch(e) {
-        toast(e.message || "Invio non riuscito");
-      } finally {
-        sendReport.disabled = false; sendReport.textContent = old;
-      }
-    };
     var pick = document.getElementById("menuPick");
     if (!pick) return;
     var m = currentMenu();
@@ -375,7 +338,7 @@
       var kind=(document.getElementById("imp-type")||{}).value || "school";
       var cycle=kind==="event" ? {mode:"single",weeks:1} : {mode:"weekly",weeks:4};
       var secs=kind==="event" ? [{id:"antipasto",label:"Antipasto"},{id:"primo",label:"Primo"},{id:"secondo",label:"Secondo"},{id:"dolce",label:"Dolce"},{id:"bevande",label:"Bevande"}] : DEFAULT_SECTIONS.slice();
-      var created = makeMenu({ name:name, type:kind, cycle:cycle, sections:secs, weeks:kind==="event"?[{name:"Menu",days:emptyDays()}]:undefined });
+      var created = makeMenu({ name:name, type:kind, cycle:cycle, sections:secs, weeks:kind==="event"?[{name:"Menu",days:emptyDays(secs)}]:undefined });
       state.menus.push(created); state.activeId = created.id; saveLibrary();
       toast("Apri la tabella e tocca le celle"); goTab("settimane"); renderAll();
       offerLibraryCopy();
@@ -474,6 +437,33 @@
     box.innerHTML = tintCardHtml() + menuSettingsCardHtml() + libraryCardHtml(false) + reportCardHtml() + list;
   }
   function bind(){
+    var saveMenuSettings=document.getElementById("saveMenuSettings");
+    if(saveMenuSettings) saveMenuSettings.onclick=function(){
+      var m=currentMenu(); if(!m) return;
+      var oldSections=sectionsOf(m).slice();
+      m.type=document.getElementById("menuType").value;
+      m.period=document.getElementById("menuPeriod").value.trim();
+      m.validFrom=document.getElementById("menuValidFrom").value;
+      m.validTo=document.getElementById("menuValidTo").value;
+      var cm=document.getElementById("menuCycle").value;
+      var labels=document.getElementById("menuSections").value.split(",").map(function(x){return x.trim();}).filter(Boolean);
+      var newSections=labels.length?labels.map(function(label,i){return {id:sectionId(label,i),label:label};}):oldSections;
+      m.sections=newSections;
+      (m.weeks||[]).forEach(function(w){DAYS.forEach(function(d){w.days[d.id]=ensureMealShape(w.days[d.id],newSections);});});
+      if(cm==="single" && m.weeks.length>1) m.weeks=m.weeks.slice(0,1);
+      while(cm==="weekly" && m.weeks.length<4) m.weeks.push({name:WEEK_NAMES[m.weeks.length]||("Settimana "+(m.weeks.length+1)),days:emptyDays(newSections)});
+      m.cycle={mode:cm,weeks:m.weeks.length};
+      saveLibrary(); renderAll(); toast("Impostazioni salvate");
+    };
+    var sendReport=document.getElementById("sendReport");
+    if(sendReport) sendReport.onclick=async function(){
+      var m=currentMenu(), contextEl=document.getElementById("reportContext"), messageEl=document.getElementById("reportMessage"), websiteEl=document.getElementById("reportWebsite");
+      var message=(messageEl&&messageEl.value||"").trim(); if(!m||message.length<3){toast("Scrivi una segnalazione");return;}
+      var old=sendReport.textContent; sendReport.disabled=true; sendReport.textContent="Invio...";
+      try{await submitReport(m.id,(contextEl&&contextEl.value||"").trim(),message,websiteEl&&websiteEl.value||""); if(messageEl)messageEl.value=""; if(contextEl)contextEl.value=""; toast("Segnalazione inviata");}
+      catch(e){toast(e.message||"Invio non riuscito");} finally{sendReport.disabled=false;sendReport.textContent=old;}
+    };
+
     document.querySelectorAll(".course").forEach(function(el){
       el.onclick = function(e){
         if (e.target.closest(".edit-btn")) return;
@@ -1347,28 +1337,26 @@
     if(!obj || typeof obj!=="object") throw new Error("il file non contiene un oggetto JSON");
     var name=(obj.name||"Nuovo menu").toString().trim() || "Nuovo menu";
     var period=(obj.period||"").toString().trim();
+    var sections=Array.isArray(obj.sections)&&obj.sections.length ? obj.sections.map(function(x,i){
+      var label=String((x&&x.label)||("Sezione "+(i+1))).trim();
+      return {id:String((x&&x.id)||sectionId(label,i)),label:label};
+    }) : DEFAULT_SECTIONS.slice();
     var srcWeeks=Array.isArray(obj.weeks)?obj.weeks:[];
-    var weeks=WEEK_NAMES.map(function(wn,i){
-      var src=srcWeeks[i]||{};
-      var srcDays=(src&&src.days)||{};
-      var days={};
-      DAYS.forEach(function(d){ days[d.id]=normalizeMealShape(srcDays[d.id]); });
-      return { name:(src.name||wn), days:days };
-    });
-    return {
-      schemaVersion:2,
-      id: obj.id || "",
-      name:name,
-      type:String(obj.type || "school"),
-      period:period,
-      validFrom:String(obj.validFrom || ""),
-      validTo:String(obj.validTo || ""),
-      cycle:(obj.cycle && typeof obj.cycle==="object") ? obj.cycle : {mode:"weekly",weeks:weeks.length || 4},
-      sections:Array.isArray(obj.sections) && obj.sections.length ? obj.sections : [
-        {id:"primo",label:"Primo"},{id:"secondo",label:"Secondo"},{id:"contorno",label:"Contorno"},{id:"frutta",label:"Frutta"},{id:"merenda",label:"Merenda"}
-      ],
-      weeks:weeks
-    };
+    var wanted=(obj.cycle&&obj.cycle.mode==="single")?1:Math.max(1,srcWeeks.length||4);
+    var weeks=[];
+    for(var i=0;i<wanted;i++){
+      var src=srcWeeks[i]||{}, srcDays=(src&&src.days)||{}, days={};
+      DAYS.forEach(function(d){
+        var raw=srcDays[d.id]||{}, out=meal(sections);
+        sections.forEach(function(sec){ out[sec.id]=String(raw[sec.id]||""); out[sec.id+"A"]=String(raw[sec.id+"A"]||""); });
+        days[d.id]=out;
+      });
+      weeks.push({name:String(src.name||WEEK_NAMES[i]||("Settimana "+(i+1))),days:days});
+    }
+    return {schemaVersion:2,id:obj.id||"",name:name,type:String(obj.type||"school"),period:period,
+      validFrom:String(obj.validFrom||""),validTo:String(obj.validTo||""),
+      cycle:(obj.cycle&&typeof obj.cycle==="object")?obj.cycle:{mode:"weekly",weeks:weeks.length},
+      sections:sections,weeks:weeks};
   }
   function saveImportedMenu(norm){
     var nameInput=document.getElementById("imp-name");
