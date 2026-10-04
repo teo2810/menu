@@ -74,7 +74,19 @@
   function emptyDays(){ var o={}; DAYS.forEach(function(d){ o[d.id]=meal(); }); return o; }
   function makeMenu(p){
     p = p || {};
-    return { id: p.id || ("menu-" + Date.now()), name: p.name || "Nuovo menu", period: p.period || "", weeks: p.weeks || [
+    return {
+      schemaVersion: 2,
+      id: p.id || ("menu-" + Date.now()),
+      name: p.name || "Nuovo menu",
+      type: p.type || "school",
+      period: p.period || "",
+      validFrom: p.validFrom || "",
+      validTo: p.validTo || "",
+      cycle: p.cycle || { mode:"weekly", weeks:4 },
+      sections: Array.isArray(p.sections) && p.sections.length ? p.sections : [
+        {id:"primo",label:"Primo"},{id:"secondo",label:"Secondo"},{id:"contorno",label:"Contorno"},{id:"frutta",label:"Frutta"},{id:"merenda",label:"Merenda"}
+      ],
+      weeks: p.weeks || [
       { name:"Prima settimana", days:emptyDays() },
       { name:"Seconda settimana", days:emptyDays() },
       { name:"Terza settimana", days:emptyDays() },
@@ -1249,7 +1261,20 @@
       DAYS.forEach(function(d){ days[d.id]=normalizeMealShape(srcDays[d.id]); });
       return { name:(src.name||wn), days:days };
     });
-    return { name:name, period:period, weeks:weeks };
+    return {
+      schemaVersion:2,
+      id: obj.id || "",
+      name:name,
+      type:String(obj.type || "school"),
+      period:period,
+      validFrom:String(obj.validFrom || ""),
+      validTo:String(obj.validTo || ""),
+      cycle:(obj.cycle && typeof obj.cycle==="object") ? obj.cycle : {mode:"weekly",weeks:weeks.length || 4},
+      sections:Array.isArray(obj.sections) && obj.sections.length ? obj.sections : [
+        {id:"primo",label:"Primo"},{id:"secondo",label:"Secondo"},{id:"contorno",label:"Contorno"},{id:"frutta",label:"Frutta"},{id:"merenda",label:"Merenda"}
+      ],
+      weeks:weeks
+    };
   }
   function saveImportedMenu(norm){
     var nameInput=document.getElementById("imp-name");
@@ -1262,7 +1287,7 @@
     offerLibraryCopy();
   }
   function libraryPayload(){
-    return { kind:"menu-library", version:1, menus: state.menus, activeId: state.activeId };
+    return { kind:"menu-library", version:2, menus: state.menus, activeId: state.activeId };
   }
   function libraryFile(){
     var blob = new Blob([JSON.stringify(libraryPayload(), null, 2)], { type:"application/json" });
@@ -1292,12 +1317,15 @@
     download();
   }
   function isLibraryFile(obj){
-    return !!(obj && Array.isArray(obj.menus) && (obj.kind === "menu-library" || obj.version === 1));
+    return !!(obj && Array.isArray(obj.menus) && (obj.kind === "menu-library" || obj.version === 1 || obj.version === 2));
   }
   function applyLibraryObject(obj){
     var menus = obj.menus.map(function(m, i){
       var norm = validateAndNormalizeMenuJson(m);
-      return makeMenu({ id: m.id || ("menu-" + Date.now() + "-" + i), name: norm.name, period: norm.period, weeks: norm.weeks });
+      return makeMenu({
+        id:m.id || ("menu-" + Date.now() + "-" + i), name:norm.name, type:norm.type, period:norm.period,
+        validFrom:norm.validFrom, validTo:norm.validTo, cycle:norm.cycle, sections:norm.sections, weeks:norm.weeks
+      });
     });
     state.menus = menus;
     var wanted = obj.activeId;
