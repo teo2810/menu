@@ -281,7 +281,7 @@
   }
   function filledWeekIdx(menu){
     var out=[];
-    (menu && menu.weeks || []).forEach(function(w,i){ if (weekFilled(w)) out.push(i); });
+    (menu && menu.weeks || []).forEach(function(w,i){ if (w && DAYS.some(function(d){return dishFilled(w.days&&w.days[d.id],menu);})) out.push(i); });
     return out;
   }
   function mealHtml(d, weekIdx, dayId){
