@@ -185,7 +185,9 @@
   function renderCloudStatus(){ var el=document.getElementById("cloudStatus"); if(!el)return; el.textContent=!getCloudKey()?"Non attiva":(!navigator.onLine?"Offline · modifiche salvate sul dispositivo":(cloudBusy?"Sincronizzazione…":"Attiva")); }
   function cloudCardHtml(){
     var on=!!getCloudKey();
-    return "<div class='meal-card cloud-card'><h2>Sincronizzazione</h2><p class=status id=cloudStatus>"+(on?"Attiva":"Non attiva")+"</p>"+(on?"<div class=actions><button type=button class='btn btn-primary' id=cloudSync>Sincronizza ora</button><button type=button class='btn btn-ghost' id=cloudDisconnect>Disconnetti</button></div>":"<div class=field><label>Chiave privata</label><input id=cloudKey type=password autocomplete=off placeholder='Chiave MENU_SYNC_KEY'></div><button type=button class='btn btn-primary btn-wide' id=cloudConnect>Attiva sincronizzazione</button>")+"</div>";
+    var status=on?(navigator.onLine?"Sincronizzato":"Offline") : "Non attivo";
+    return "<details class='settings-panel' "+(on?"":"open")+"><summary><span><b>Sincronizzazione</b><small id=cloudStatus>"+status+"</small></span><i></i></summary><div class=panel-body>"+
+      (on?"<div class=compact-actions><button type=button class='btn btn-primary' id=cloudSync>Sincronizza ora</button><button type=button class='btn btn-ghost' id=cloudDisconnect>Disconnetti</button></div>":"<div class=field><label>Chiave privata</label><input id=cloudKey type=password autocomplete=off placeholder='Chiave di sincronizzazione'></div><button type=button class='btn btn-primary btn-wide' id=cloudConnect>Attiva sincronizzazione</button>")+"</div></details>";
   }
   function currentMenu(){ return state.menus.find(function(m){ return m.id === state.activeId; }) || state.menus[0] || null; }
   function esc(s){
@@ -472,36 +474,33 @@
   function menuSettingsCardHtml(){
     var m=currentMenu(); if(!m) return "";
     var type=m.type||"school", cycle=(m.cycle&&m.cycle.mode)||"weekly";
-    return "<div class='meal-card'><h2>Impostazioni menu</h2>"+
-      "<div class=field><label>Tipo</label><select id=menuType><option value=school"+(type==="school"?" selected":"")+">Scuola</option><option value=work"+(type==="work"?" selected":"")+">Lavoro</option><option value=event"+(type==="event"?" selected":"")+">Evento / festa</option><option value=other"+(type==="other"?" selected":"")+">Altro</option></select></div>"+
+    return "<details class='settings-panel'><summary><span><b>Impostazioni menu</b><small>Tipo, periodo, ciclo e sezioni</small></span><i></i></summary><div class=panel-body>"+
+      "<div class=compact-grid><div class=field><label>Tipo</label><select id=menuType><option value=school"+(type==="school"?" selected":"")+">Scuola</option><option value=work"+(type==="work"?" selected":"")+">Lavoro</option><option value=event"+(type==="event"?" selected":"")+">Evento / festa</option><option value=other"+(type==="other"?" selected":"")+">Altro</option></select></div>"+
+      "<div class=field><label>Ciclo</label><select id=menuCycle><option value=weekly"+(cycle==="weekly"?" selected":"")+">Settimanale</option><option value=single"+(cycle==="single"?" selected":"")+">Singolo</option></select></div></div>"+
       "<div class=field><label>Periodo</label><input id=menuPeriod value='"+esc(m.period||"")+"' placeholder='Es. Menu invernale'></div>"+
-      "<div class=actions><div class=field><label>Valido dal</label><input id=menuValidFrom type=date value='"+esc(m.validFrom||"")+"'></div><div class=field><label>Al</label><input id=menuValidTo type=date value='"+esc(m.validTo||"")+"'></div></div>"+
-      "<div class=field><label>Ciclo</label><select id=menuCycle><option value=weekly"+(cycle==="weekly"?" selected":"")+">Settimanale ciclico</option><option value=single"+(cycle==="single"?" selected":"")+">Evento singolo</option></select></div>"+
-      "<div class=field><label>Sezioni</label><input id=menuSections value='"+esc((m.sections||[]).map(function(x){return x.label;}).join(", "))+"' placeholder='Antipasto, Primo, Secondo, Dolce'></div>"+
-      "<button type=button class='btn btn-primary btn-wide' id=saveMenuSettings>Salva impostazioni</button></div>";
+      "<div class=compact-grid><div class=field><label>Dal</label><input id=menuValidFrom type=date value='"+esc(m.validFrom||"")+"'></div><div class=field><label>Al</label><input id=menuValidTo type=date value='"+esc(m.validTo||"")+"'></div></div>"+
+      "<div class=field><label>Sezioni</label><input id=menuSections value='"+esc((m.sections||[]).map(function(x){return x.label;}).join(", "))+"' placeholder='Primo, Secondo, Contorno'></div>"+
+      "<button type=button class='btn btn-primary btn-wide' id=saveMenuSettings>Salva impostazioni</button></div></details>";
   }
   function reportCardHtml(){
-    var m = currentMenu();
-    if (!m) return "";
-    return "<div class='meal-card report-card'><h2>Segnala un problema</h2>"+
-      "<p class=status>La segnalazione viene inviata senza nome, email o telefono.</p>"+
+    var m=currentMenu(); if(!m) return "";
+    return "<details class='settings-panel'><summary><span><b>Segnala un problema</b><small>Invio anonimo</small></span><i></i></summary><div class=panel-body>"+
       "<div class=field><label>Riferimento</label><input id=reportContext maxlength=500 placeholder='Es. Seconda settimana · Martedi'></div>"+
-      "<div class=field><label>Problema</label><textarea id=reportMessage maxlength=1000 placeholder='Descrivi cosa non torna'></textarea></div>"+
+      "<div class=field><label>Problema</label><textarea class=compact-textarea id=reportMessage maxlength=1000 placeholder='Descrivi cosa non torna'></textarea></div>"+
       "<input id=reportWebsite tabindex=-1 autocomplete=off aria-hidden=true style='position:absolute;left:-9999px;width:1px;height:1px'>"+
-      "<button type=button class='btn btn-primary btn-wide' id=sendReport>Invia segnalazione</button></div>";
+      "<button type=button class='btn btn-primary btn-wide' id=sendReport>Invia segnalazione</button></div></details>";
   }
   function renderInfo(){
-    var box = document.getElementById("screen-info");
-    var list = state.menus.length
-      ? "<h3 style='font-family:Fraunces,serif'>I tuoi menu</h3>"+state.menus.map(function(item){
-          return "<div class='allergen-row menu-row'><input class=menu-rename data-rename="+item.id+" value=\""+esc(item.name)+"\" aria-label=Nome>"+
-            "<span><button type=button class=ico-btn data-use="+item.id+" aria-label=Apri>"+
-            "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M9 6h11v12H9'/><path d='M13 12H4'/><path d='M8 8l-4 4 4 4'/></svg></button>"+
-            "<button type=button class='ico-btn danger' data-del="+item.id+" aria-label=Elimina>"+
-            "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M4 7h16'/><path d='M9 7V5h6v2'/><path d='M7 7l1 13h8l1-13'/></svg></button></span></div>";
-        }).join("")
-      : "<div class=note>Ancora nessun menu. Vai su Importa.</div>";
-    box.innerHTML = tintCardHtml() + cloudCardHtml() + menuSettingsCardHtml() + '<div class="meal-card compact-tools"><h2>Dati menu</h2><p class="status">Backup ed esportazione in un unico punto.</p><div class="actions"><button type="button" class="btn btn-primary" data-save-copy>Salva copia</button><button type="button" class="btn btn-ghost" data-load-copy>Carica copia</button></div>'+exportCardHtml().replace('class="meal-card export-card"','class="embedded-export export-card"')+'<input id="fileLibrary" type="file" accept=".json,application/json" hidden></div>' + reportCardHtml() + list;
+    var box=document.getElementById("screen-info");
+    var list=state.menus.length ? state.menus.map(function(item){
+      var active=item.id===state.activeId?" active":"";
+      return "<div class='menu-manage-row"+active+"'><input class=menu-rename data-rename="+item.id+" value=\""+esc(item.name)+"\" aria-label=Nome><span><button type=button class=ico-btn data-use="+item.id+" aria-label=Apri><svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M9 6h11v12H9'/><path d='M13 12H4'/><path d='M8 8l-4 4 4 4'/></svg></button><button type=button class='ico-btn danger' data-del="+item.id+" aria-label=Elimina><svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M4 7h16'/><path d='M9 7V5h6v2'/><path d='M7 7l1 13h8l1-13'/></svg></button></span></div>";
+    }).join("") : "<p class=status>Ancora nessun menu.</p>";
+    var dataPanel="<details class='settings-panel'><summary><span><b>Dati e backup</b><small>Esporta o ripristina i menu</small></span><i></i></summary><div class=panel-body><div class=compact-actions><button type=button class='btn btn-primary' data-save-copy>Salva copia</button><button type=button class='btn btn-ghost' data-load-copy>Carica copia</button></div>"+exportCardHtml().replace('class=\"meal-card export-card\"','class=\"embedded-export export-card\"')+"<input id='fileLibrary' type='file' accept='.json,application/json' hidden></div></details>";
+    box.innerHTML="<div class='info-title'><h2>Menu</h2><p>Gestione e preferenze</p></div>"+
+      "<section class='settings-card'><div class='settings-head'><b>I tuoi menu</b><span>"+state.menus.length+"</span></div><div class=menu-manage-list>"+list+"</div></section>"+
+      "<section class='settings-card settings-stack'>"+cloudCardHtml()+menuSettingsCardHtml()+dataPanel+reportCardHtml()+"</section>"+
+      "<section class='settings-card tint-compact'>"+tintCardHtml().replace("class='meal-card tint-card'","class='tint-card'")+"</section>";
   }
   function bind(){
     var saveMenuSettings=document.getElementById("saveMenuSettings");
@@ -1550,6 +1549,19 @@
     catch(e){ toast("Copia manualmente il testo"); }
   }
 
+  (function installCompactMenuUi(){
+    var st=document.createElement("style");
+    st.textContent=`
+#screen-info{padding-top:2px}.info-title{margin:0 2px 12px}.info-title h2{font-family:Fraunces,serif;font-size:1.45rem;margin:0}.info-title p{margin:2px 0 0;color:var(--muted);font-size:.78rem;font-weight:800}
+.settings-card{background:#fff;border-radius:22px;box-shadow:var(--shadow);padding:12px;margin-bottom:10px}.settings-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.settings-head b{font-family:Fraunces,serif;font-size:1rem}.settings-head span{font-size:.72rem;font-weight:800;color:var(--brand);background:var(--brand-soft);padding:3px 8px;border-radius:999px}
+.menu-manage-list{display:grid;gap:6px}.menu-manage-row{display:flex;align-items:center;gap:6px;padding:4px;border-radius:15px;background:#faf8fc;border:1px solid var(--line)}.menu-manage-row.active{background:var(--brand-soft);border-color:transparent}.menu-manage-row .menu-rename{padding:7px 8px;font-size:.86rem}.menu-manage-row span{display:flex;gap:4px}.menu-manage-row .ico-btn{width:32px;height:32px;border-radius:10px}
+.settings-stack{padding:0;overflow:hidden}.settings-panel{border-bottom:1px solid var(--line);background:#fff}.settings-panel:last-child{border-bottom:0}.settings-panel summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;cursor:pointer}.settings-panel summary::-webkit-details-marker{display:none}.settings-panel summary span{display:grid;gap:1px}.settings-panel summary b{font-size:.88rem}.settings-panel summary small{font-size:.68rem;color:var(--muted);font-weight:800}.settings-panel summary i{width:9px;height:9px;border-right:2px solid var(--brand);border-bottom:2px solid var(--brand);transform:rotate(45deg);transition:.2s}.settings-panel[open] summary i{transform:rotate(225deg);margin-top:6px}.panel-body{padding:0 12px 12px}.panel-body .field{margin:7px 0}.panel-body input,.panel-body select{padding:9px 11px;border-radius:13px;font-size:.82rem}.compact-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.compact-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.compact-actions .btn,.panel-body .btn{padding:10px 9px;border-radius:16px;font-size:.8rem}.compact-textarea{min-height:82px!important}
+.panel-body .export-card{margin:8px 0 0;padding:8px 0 0}.panel-body .export-row{min-height:36px;padding:5px 8px;font-size:.76rem}.panel-body .export-row i{width:20px;height:20px;flex-basis:20px}.panel-body .export-card h2{font-family:Nunito,system-ui,sans-serif;font-size:.82rem}.panel-body .export-card .status{display:none}
+.tint-compact{padding:11px 12px}.tint-compact .tint-card{margin:0}.tint-compact .tint-head{margin-bottom:8px}.tint-compact .tint-head b{font-family:Nunito,system-ui,sans-serif;font-size:.88rem}.tint-compact .tint-dot{height:28px}.tint-compact .tint-rail{padding:6px 8px}
+@media(max-width:360px){.compact-grid{grid-template-columns:1fr}.settings-panel summary{padding:11px 12px}}
+`;
+    document.head.appendChild(st);
+  })();
   if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(function(){});
   applyTint(currentTintId());
   renderAll();
