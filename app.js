@@ -191,7 +191,7 @@
   }
   function currentMenu(){ return state.menus.find(function(m){ return m.id === state.activeId; }) || state.menus[0] || null; }
   function esc(s){
-    return String(s || "").replace(/&/g,"&"+"amp;").replace(/</g,"&"+"lt;").replace(/>/g,"&"+"gt;").replace(/"/g,"&"+"quot;");
+    return String(s || "").replace(/&/g,"&"+"amp;").replace(/</g,"&"+"lt;").replace(/>/g,"&"+"gt;").replace(/"/g,"&"+"quot;").replace(/'/g,"&#39;");
   }
   function toast(msg){ var el = document.getElementById("toast"); if (!el) return; el.textContent = msg; el.classList.add("show"); setTimeout(function(){ el.classList.remove("show"); }, 2200); }
   function goTab(name){ if (window.setTab) window.setTab(name); }
@@ -211,11 +211,11 @@
     if (!state.menus.length) { box.innerHTML = "<p class=status>Nessun menu salvato.</p>"; return; }
     box.innerHTML = state.menus.map(function(item){
       var on = item.id === state.activeId ? " on" : "";
-      return "<button type=button class='pick-row"+on+"' data-pick="+JSON.stringify(item.id)+"><span>"+esc(item.name)+"</span><span class=pick-dot></span></button>";
+      return "<button type=button class='pick-row"+on+"' data-pick=\""+esc(item.id)+"\"><span>"+esc(item.name)+"</span><span class=pick-dot></span></button>";
     }).join("");
     box.querySelectorAll("[data-pick]").forEach(function(b){
       b.onclick = function(){
-        state.activeId = b.getAttribute("data-pick");
+        state.activeId = b.getAttribute("data-pick"); state.week=0; closeCellBar();
         saveLibrary();
         closeModal("pickModal");
         renderAll();
@@ -339,8 +339,8 @@
       document.getElementById("periodPill").textContent = "Vuoto";
       return;
     }
-    pick.textContent = m ? m.name : "Scegli menu";
-    document.getElementById("periodPill").textContent = (m && (m.period || m.name)) || "Senza periodo";
+    pick.textContent = m ? m.name+" · Cambia menu" : "Scegli menu";
+    document.getElementById("periodPill").textContent = (m && (periodFromDates(m.validFrom,m.validTo) || m.period)) || "Date non impostate";
   }
   function dishFilled(m,menu){
     return !!(m && sectionsOf(menu||currentMenu()).some(function(sec){ return String(m[sec.id]||"").trim(); }));
@@ -366,12 +366,13 @@
   function renderOggi(){
     var box = document.getElementById("screen-oggi");
     var m = currentMenu();
-    if (!m) return;
+    if (!m) {box.innerHTML="<div class='meal-card empty'><h2>Nessun menu</h2><button class='btn btn-primary btn-wide' id=goImport>Importa il primo menu</button></div>";return;}
     var now = new Date();
     var map = {1:"lunedi",2:"martedi",3:"mercoledi",4:"giovedi",5:"venerdi"};
     var dayId = map[now.getDay()];
     var vis = filledWeekIdx(m);
     var calculated=weekIndexForDate(m,now); var week=vis.length===1 ? vis[0] : (vis.length ? (vis.indexOf(calculated)>=0?calculated:vis[calculated%vis.length]) : calculated);
+    if(m.cycle&&m.cycle.mode==="single") week=0;
     var nice = now.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"});
     var validity=validityText(m);
     if(!menuIsValidOn(m,now)){ box.innerHTML="<div class=hero-today><div class=kicker>"+esc(m.name)+"</div><h2>"+nice+"</h2></div><div class='meal-card empty'><h2>Menu non attivo oggi</h2><p class=status>"+esc(validity||"Controlla il periodo di validità.")+"</p></div>"; return; }
@@ -381,7 +382,8 @@
     var box = document.getElementById("screen-settimane");
     var m = currentMenu();
     if (!m) { box.innerHTML = "<div class=meal-card empty><h2>Nessun menu</h2><button class='btn btn-primary btn-wide' id=goImport>Importa il primo menu</button></div>"; return; }
-    var vis = filledWeekIdx(m);
+    if (!m.weeks[state.week]) state.week=0;
+    var vis = m.cycle&&m.cycle.mode==="single" ? [0] : m.weeks.map(function(w,i){return i;});
     if (vis.length && vis.indexOf(state.week)<0) state.week = vis[0];
     var tabs = vis.length<=1 ? "" : m.weeks.map(function(w,i){
       if (vis.length && vis.indexOf(i)<0) return "";
@@ -486,30 +488,81 @@
     var m=currentMenu(); if(!m) return "";
     var dates=periodFromDates(m.validFrom,m.validTo), period=dates||(m.period||"Nessun periodo impostato");
     var sync=getCloudKey()?(navigator.onLine?"Cloud attivo":"Offline"):"Solo dispositivo";
-    return "<section class='active-menu-banner'><div class=active-menu-kicker>MENU ATTIVO <span>"+esc(sync)+"</span></div><h2>"+esc(m.name)+"</h2><div class=active-menu-meta><b>"+esc(typeLabel(m.type))+"</b><span>"+esc(period)+"</span></div></section>";
+    return "<section class='active-menu-banner'><div class=active-menu-kicker>MENU ATTIVO <span>"+esc(sync)+"</span></div><h2>"+esc(m.name)+"</h2><div class=active-menu-meta><b>"+esc(typeLabel(m.type))+"</b><span>"+esc(period)+"</span></div><button type=button class='btn btn-ghost btn-wide' id=changeActiveMenu>Cambia menu</button></section>";
   }
   function choiceHtml(name,value,items){
     return "<div class=choice-row data-choice="+name+">"+items.map(function(x){return "<button type=button class='choice-chip"+(x[0]===value?" on":"")+"' data-value='"+x[0]+"'>"+esc(x[1])+"</button>";}).join("")+"<input type=hidden id="+name+" value='"+esc(value)+"'></div>";
   }
-  function inferDatesFromPeriod(m){
-    if(!m || (m.validFrom&&m.validTo) || !m.period) return;
-    var hits=String(m.period).match(/\b(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})\b/g)||[];
-    function iso(x){var p=x.split(/[\/.-]/);return p[2]+"-"+p[1].padStart(2,"0")+"-"+p[0].padStart(2,"0");}
-    if(hits[0]&&!m.validFrom)m.validFrom=iso(hits[0]); if(hits[1]&&!m.validTo)m.validTo=iso(hits[1]);
+  function periodDescription(menu){
+    var text=String(menu.period||"").trim();
+    var dates=periodFromDates(menu.validFrom,menu.validTo);
+    return dates && text===dates ? "" : text;
   }
   function menuSettingsCardHtml(){
-    var m=currentMenu(); if(!m) return ""; inferDatesFromPeriod(m);
+    var m=currentMenu(); if(!m) return "";
     var type=m.type||"school", cycle=(m.cycle&&m.cycle.mode)||"weekly";
-    var dates=periodFromDates(m.validFrom,m.validTo);
     return "<details class='settings-panel'><summary><span><b>Impostazioni menu</b><small>"+esc(typeLabel(type))+" · "+(cycle==="weekly"?esc((m.weeks||[]).length+" settimane"):"menu singolo")+"</small></span><i></i></summary><div class=panel-body>"+
+      "<div class=field><label for=menuName>Nome menu</label><input id=menuName maxlength=200 value=\""+esc(m.name)+"\"></div>"+
       "<div class=field><label>Tipo</label>"+choiceHtml("menuType",type,[["school","Scuola"],["work","Lavoro"],["event","Evento"],["other","Altro"]])+"</div>"+
       "<div class=field><label>Ciclo</label>"+choiceHtml("menuCycle",cycle,[["weekly","Settimanale"],["single","Singolo"]])+"</div>"+
-      "<div class=compact-grid><div class=field><label>Dal</label><input id=menuValidFrom type=date value='"+esc(m.validFrom||"")+"'></div><div class=field><label>Al</label><input id=menuValidTo type=date value='"+esc(m.validTo||"")+"'></div></div>"+
-      "<div class=auto-period id=autoPeriod><span>Periodo</span><b>"+esc(dates||(m.period||"Automatico dalle date"))+"</b></div>"+
-      "<div class=field><label>Etichetta periodo <small>opzionale</small></label><input id=menuPeriod value='"+esc(dates?"":(m.period||""))+"' placeholder='Es. Menu invernale'></div>"+
-      "<div class=field><label>Sezioni</label><input id=menuSections value='"+esc((m.sections||[]).map(function(x){return x.label;}).join(", "))+"' placeholder='Primo, Secondo, Contorno'></div>"+
+      "<div class=compact-grid><div class=field><label for=menuValidFrom>Dal</label><input id=menuValidFrom type=date value='"+esc(m.validFrom||"")+"'></div><div class=field><label for=menuValidTo>Al</label><input id=menuValidTo type=date value='"+esc(m.validTo||"")+"'></div></div>"+
+      "<div class=field><label>Descrizione <small>facoltativa, senza ripetere le date</small></label><input id=menuPeriod value='"+esc(periodDescription(m))+"' placeholder='Es. Menu invernale'></div>"+
+      "<div class=field><label>Sezioni</label><input id=menuSections value='"+esc(sectionsOf(m).map(function(x){return x.label;}).join(", "))+"' placeholder='Primo, Secondo, Contorno'></div>"+
       "<button type=button class='btn btn-primary btn-wide' id=saveMenuSettings>Salva impostazioni</button></div></details>";
   }
+  var admin={key:"",reports:[],filter:"open",offset:0,more:false,busy:false,error:"",connected:false};
+  function adminCardHtml(){
+    return "<details class='settings-panel' id=adminPanel><summary><span><b>Admin · Segnalazioni</b><small>Leggi, risolvi e riapri le segnalazioni</small></span><i></i></summary><div class=panel-body id=adminBody></div></details>";
+  }
+  async function adminRequest(method,path,body){
+    var controller=new AbortController(), timer=setTimeout(function(){controller.abort();},15000);
+    try{
+      var r=await fetch(API_BASE+"/api/admin/reports"+path,{method:method,headers:{"X-Menu-Admin-Key":admin.key,"Content-Type":"application/json"},cache:"no-store",signal:controller.signal,body:body?JSON.stringify(body):undefined});
+      var d=await r.json().catch(function(){return {};});
+      if(r.status===401){admin.key="";admin.connected=false;admin.reports=[];throw new Error("Chiave Admin non valida");}
+      if(r.status===404) throw new Error(method==="GET"?"Area Admin non disponibile: aggiorna il Worker Cloudflare.":"Segnalazione non trovata. Aggiorna l’elenco.");
+      if(!r.ok||!d.ok) throw new Error(d.error||("Errore "+r.status));
+      return d;
+    }catch(e){if(e.name==="AbortError")throw new Error("Connessione scaduta. Riprova.");throw e;}
+    finally{clearTimeout(timer);}
+  }
+  async function loadReports(reset){
+    if(admin.busy)return;
+    admin.busy=true;admin.error="";paintAdmin();
+    var offset=reset?0:admin.offset;
+    try{
+      var d=await adminRequest("GET","?status="+encodeURIComponent(admin.filter)+"&offset="+offset);
+      if(!Array.isArray(d.reports))throw new Error("Risposta Admin non valida");
+      admin.reports=reset?d.reports:admin.reports.concat(d.reports);
+      admin.offset=offset+d.reports.length;admin.more=!!d.hasMore;admin.connected=true;
+    }catch(e){admin.error=e.message;}
+    finally{admin.busy=false;paintAdmin();}
+  }
+  function paintAdmin(){
+    var box=document.getElementById("adminBody");if(!box)return;
+    if(!admin.connected){
+      box.innerHTML="<p class=status>Usa la chiave Admin, distinta dalla chiave di sincronizzazione. Resta in memoria solo fino alla chiusura della pagina.</p><div class=field><label for=adminKey>Chiave Admin</label><input id=adminKey type=password autocomplete=off></div><button type=button class='btn btn-primary btn-wide' id=adminLogin "+(admin.busy?"disabled":"")+">"+(admin.busy?"Accesso…":"Accedi")+"</button><p class=admin-message role=status>"+esc(admin.error)+"</p>";
+      document.getElementById("adminLogin").onclick=function(){var key=document.getElementById("adminKey").value.trim();if(!key){toast("Inserisci la chiave Admin");return;}admin.key=key;loadReports(true);};
+      return;
+    }
+    box.innerHTML="<div class=field><label for=adminFilter>Mostra</label><select id=adminFilter "+(admin.busy?"disabled":"")+"><option value=open>Aperte</option><option value=resolved>Risolte</option><option value=all>Tutte</option></select></div><div class=admin-controls><button type=button class='btn btn-ghost' id=adminRefresh>Aggiorna</button><button type=button class='btn btn-ghost' id=adminLogout>Esci</button></div><p class=admin-message role=status>"+esc(admin.busy?"Caricamento…":admin.error||admin.reports.length+" segnalazioni caricate")+"</p>"+
+      admin.reports.map(function(r,i){var m=state.menus.find(function(x){return x.id===r.menu_id;});return "<article class=admin-report><b>"+esc(m?m.name:r.menu_id)+"</b><br><small>#"+esc(r.id)+" · "+esc(r.created_at)+" · "+(r.status==="resolved"?"Risolta":"Aperta")+"</small><p>"+esc(r.context)+"</p><p>"+esc(r.message)+"</p><button type=button class='btn btn-ghost btn-wide' data-report-index='"+i+"' "+(admin.busy?"disabled":"")+">"+(r.status==="resolved"?"Riapri":"Segna come risolta")+"</button></article>";}).join("")+
+      (!admin.reports.length&&!admin.busy&&!admin.error?"<p class=status>Nessuna segnalazione per questo filtro.</p>":"")+(admin.more?"<button type=button class='btn btn-ghost btn-wide' id=adminMore>Carica altre</button>":"");
+    var filter=document.getElementById("adminFilter");filter.value=admin.filter;
+    filter.onchange=function(){admin.filter=filter.value;admin.reports=[];loadReports(true);};
+    document.getElementById("adminRefresh").onclick=function(){loadReports(true);};
+    document.getElementById("adminLogout").disabled=admin.busy;
+    document.getElementById("adminLogout").onclick=function(){admin.key="";admin.connected=false;admin.reports=[];admin.error="";paintAdmin();};
+    var more=document.getElementById("adminMore");if(more){more.disabled=admin.busy;more.onclick=function(){loadReports(false);};}
+    box.querySelectorAll("[data-report-index]").forEach(function(b){b.onclick=async function(){
+      if(admin.busy)return;var report=admin.reports[Number(b.dataset.reportIndex)];
+      admin.busy=true;admin.error="";paintAdmin();
+      try{await adminRequest("PATCH","/"+encodeURIComponent(report.id),{status:report.status==="resolved"?"open":"resolved"});admin.busy=false;await loadReports(true);}
+      catch(e){admin.error=e.message;admin.busy=false;paintAdmin();}
+    };});
+  }
+  function wireAdmin(){paintAdmin();}
+
   function reportCardHtml(){
     var m=currentMenu(); if(!m) return "";
     return "<details class='settings-panel'><summary><span><b>Segnala un problema</b><small>Invio anonimo</small></span><i></i></summary><div class=panel-body>"+
@@ -522,32 +575,41 @@
     var box=document.getElementById("screen-info");
     var list=state.menus.length ? state.menus.map(function(item){
       var active=item.id===state.activeId?" active":"";
-      return "<div class='menu-manage-row"+active+"'><input class=menu-rename data-rename="+item.id+" value=\""+esc(item.name)+"\" aria-label=Nome><span><button type=button class=ico-btn data-use="+item.id+" aria-label=Apri><svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M9 6h11v12H9'/><path d='M13 12H4'/><path d='M8 8l-4 4 4 4'/></svg></button><button type=button class='ico-btn danger' data-del="+item.id+" aria-label=Elimina><svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M4 7h16'/><path d='M9 7V5h6v2'/><path d='M7 7l1 13h8l1-13'/></svg></button></span></div>";
+      return "<div class='menu-manage-row"+active+"'><button type=button class='menu-select' data-use=\""+esc(item.id)+"\" aria-pressed='"+!!active+"'><b>"+esc(item.name)+"</b><small>"+(active?"Attivo":"Usa questo menu")+"</small></button><button type=button class='ico-btn danger' data-del=\""+esc(item.id)+"\" aria-label=\"Elimina "+esc(item.name)+"\"><svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' aria-hidden='true'><path d='M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13'/></svg></button></div>";
     }).join("") : "<p class=status>Ancora nessun menu.</p>";
     var dataPanel="<details class='settings-panel'><summary><span><b>Dati e backup</b><small>Esporta o ripristina i menu</small></span><i></i></summary><div class=panel-body><div class=compact-actions><button type=button class='btn btn-primary' data-save-copy>Salva copia</button><button type=button class='btn btn-ghost' data-load-copy>Carica copia</button></div>"+exportCardHtml().replace('class=\"meal-card export-card\"','class=\"embedded-export export-card\"')+"<input id='fileLibrary' type='file' accept='.json,application/json' hidden></div></details>";
-    box.innerHTML="<div class='info-title'><h2>Menu</h2><p>Gestione e preferenze</p></div>"+activeMenuBannerHtml()+
+    box.innerHTML="<div class='info-title'><h2>Menu e impostazioni</h2><p>Scegli il menu e personalizza l’app</p></div>"+activeMenuBannerHtml()+
       "<section class='settings-card'><div class='settings-head'><b>I tuoi menu</b><span>"+state.menus.length+"</span></div><div class=menu-manage-list>"+list+"</div></section>"+
-      "<section class='settings-card settings-stack'>"+cloudCardHtml()+menuSettingsCardHtml()+dataPanel+reportCardHtml()+"</section>"+
+      "<section class='settings-card settings-stack'>"+cloudCardHtml()+menuSettingsCardHtml()+dataPanel+reportCardHtml()+adminCardHtml()+"</section>"+
       "<section class='settings-card tint-compact'>"+tintCardHtml().replace("class='meal-card tint-card'","class='tint-card'")+"</section>";
   }
   function bind(){
+    var change=document.getElementById("changeActiveMenu");
+    if(change) change.onclick=function(){renderPickList();openModal("pickModal");};
+    wireAdmin();
     var saveMenuSettings=document.getElementById("saveMenuSettings");
     if(saveMenuSettings) saveMenuSettings.onclick=function(){
       var m=currentMenu(); if(!m) return;
       var oldSections=sectionsOf(m).slice();
+      var from=document.getElementById("menuValidFrom").value, to=document.getElementById("menuValidTo").value;
+      if(from && to && from>to){toast("La data Al deve seguire la data Dal");return;}
+      var name=document.getElementById("menuName").value.trim();
+      if(!name){toast("Inserisci il nome del menu");return;}
+      m.name=name;
       m.type=document.getElementById("menuType").value;
       m.validFrom=document.getElementById("menuValidFrom").value;
       m.validTo=document.getElementById("menuValidTo").value;
       var manualPeriod=document.getElementById("menuPeriod").value.trim();
-      m.period=periodFromDates(m.validFrom,m.validTo)||manualPeriod;
+      m.period=manualPeriod;
       var cm=document.getElementById("menuCycle").value;
       var labels=document.getElementById("menuSections").value.split(",").map(function(x){return x.trim();}).filter(Boolean);
-      var newSections=labels.length?labels.map(function(label,i){return {id:sectionId(label,i),label:label};}):oldSections;
+      var newSections=labels.length?labels.map(function(label,i){var existing=oldSections.find(function(sec){return sec.label===label;}); return {id:existing?existing.id:sectionId(label,i),label:label};}):oldSections;
       m.sections=newSections;
       (m.weeks||[]).forEach(function(w){DAYS.forEach(function(d){w.days[d.id]=ensureMealShape(w.days[d.id],newSections);});});
-      if(cm==="single" && m.weeks.length>1) m.weeks=m.weeks.slice(0,1);
+      // Keep all stored weeks so switching back never discards dishes.
       while(cm==="weekly" && m.weeks.length<4) m.weeks.push({name:WEEK_NAMES[m.weeks.length]||("Settimana "+(m.weeks.length+1)),days:emptyDays(newSections)});
-      m.cycle={mode:cm,weeks:m.weeks.length};
+      m.cycle=Object.assign({},m.cycle,{mode:cm,weeks:cm==="single"?1:m.weeks.length});
+      state.week=0;
       saveLibrary(); renderAll(); toast("Impostazioni salvate");
     };
     document.querySelectorAll("[data-choice]").forEach(function(row){
@@ -556,10 +618,6 @@
         var hidden=row.querySelector("input[type=hidden]"); if(hidden) hidden.value=btn.getAttribute("data-value");
       };});
     });
-    ["menuValidFrom","menuValidTo"].forEach(function(id){var el=document.getElementById(id);if(el)el.onchange=function(){
-      var a=document.getElementById("menuValidFrom").value,b=document.getElementById("menuValidTo").value,p=periodFromDates(a,b),box=document.getElementById("autoPeriod");
-      if(box){var strong=box.querySelector("b");if(strong)strong.textContent=p||"Automatico dalle date";}
-    };});
     var sendReport=document.getElementById("sendReport");
     if(sendReport) sendReport.onclick=async function(){
       var m=currentMenu(), contextEl=document.getElementById("reportContext"), messageEl=document.getElementById("reportMessage"), websiteEl=document.getElementById("reportWebsite");
@@ -597,29 +655,14 @@
     document.querySelectorAll("[data-tint-pick]").forEach(function(b){
       b.onclick = function(){ applyTint(b.getAttribute("data-tint-pick")); };
     });
-    document.querySelectorAll("[data-use]").forEach(function(b){ b.onclick = function(){ state.activeId=b.getAttribute("data-use"); saveLibrary(); renderAll(); }; });
-    document.querySelectorAll("[data-rename]").forEach(function(inp){
-      var apply = function(){
-        var id = inp.getAttribute("data-rename");
-        var item = state.menus.find(function(x){ return x.id===id; });
-        if (!item) return;
-        var name = inp.value.trim();
-        if (!name) { inp.value = item.name; return; }
-        if (name===item.name) return;
-        item.name = name;
-        saveLibrary();
-        renderHeader();
-        toast("Nome aggiornato");
-      };
-      inp.onchange = apply;
-      inp.onkeydown = function(e){ if (e.key==="Enter") { e.preventDefault(); inp.blur(); } };
-    });
+    document.querySelectorAll("[data-use]").forEach(function(b){ b.onclick = function(){ state.activeId=b.getAttribute("data-use"); state.week=0; closeCellBar(); saveLibrary(); renderAll(); }; });
     document.querySelectorAll("[data-del]").forEach(function(b){
       b.onclick = function(){
         var id = b.getAttribute("data-del");
         ask("Eliminare questo menu?", getCloudKey()?"Verrà eliminato anche dalla libreria sincronizzata.":"Verrà rimosso solo da questo dispositivo.", "Elimina", function(){
           state.menus = state.menus.filter(function(x){ return x.id !== id; });
-          state.activeId = state.menus[0] && state.menus[0].id;
+          if(state.activeId===id) state.activeId = (state.menus[0] && state.menus[0].id)||null;
+          state.week=0;
           saveLibrary();
           renderAll();
         });
@@ -1457,7 +1500,7 @@
       return {id:String((x&&x.id)||sectionId(label,i)),label:label};
     }) : DEFAULT_SECTIONS.slice();
     var srcWeeks=Array.isArray(obj.weeks)?obj.weeks:[];
-    var wanted=(obj.cycle&&obj.cycle.mode==="single")?1:Math.max(1,srcWeeks.length||4);
+    var wanted=Math.max(1,srcWeeks.length||((obj.cycle&&obj.cycle.mode==="single")?1:4));
     var weeks=[];
     for(var i=0;i<wanted;i++){
       var src=srcWeeks[i]||{}, srcDays=(src&&src.days)||{}, days={};
@@ -1611,6 +1654,11 @@
 .week-tab,.day-chip{box-shadow:0 7px 18px rgba(20,24,32,.11),0 2px 4px rgba(20,24,32,.05)}.week-tab.on,.day-chip.on{box-shadow:0 8px 18px rgba(20,24,32,.13)}
 nav.tabbar ul{box-shadow:0 16px 36px rgba(20,24,32,.16)}nav.tabbar .blob{box-shadow:0 10px 22px rgba(20,24,32,.18),0 4px 10px rgba(20,24,32,.08),inset 0 3px 8px rgba(255,255,255,.55)}
 .course.open::before{box-shadow:0 8px 18px rgba(20,24,32,.07)}.tint-dot.on{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--brand),0 6px 14px rgba(20,24,32,.13)}
+header.top{align-items:flex-start;padding-bottom:20px;flex-wrap:wrap}.brand-block{min-width:0;flex:1}.brand-block h1{margin-bottom:10px}.menu-pick{max-width:100%;white-space:normal;text-align:left}.pill{max-width:100%;white-space:normal;box-shadow:0 6px 16px rgba(20,24,32,.12)}
+.active-menu-banner h2{margin:10px 0 14px;overflow-wrap:anywhere}.active-menu-banner .btn{position:relative;z-index:1;margin-top:14px}.active-menu-banner:after{pointer-events:none}
+.menu-select{flex:1;min-width:0;text-align:left;border:0;background:transparent;color:var(--ink);font:inherit;padding:10px;cursor:pointer}.menu-select b{display:block;overflow-wrap:anywhere;font-size:.88rem}.menu-select small{display:block;color:var(--brand);font-weight:800;margin-top:3px}.menu-manage-row.active{border:2px solid var(--brand)}.menu-manage-row .ico-btn{flex-shrink:0;margin-right:6px}.menu-manage-row{background:var(--bg)}
+button:focus-visible,summary:focus-visible{outline:2px solid var(--brand);outline-offset:3px}.btn:disabled{opacity:.6;cursor:wait}.tint-dot{box-shadow:inset 0 -1px 0 rgba(20,24,32,.06)}.cell-bar{box-shadow:0 -8px 24px rgba(20,24,32,.16)}
+.admin-report{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px;overflow-wrap:anywhere}.admin-report p{white-space:pre-wrap;font-size:.85rem}.admin-report small{color:var(--muted)}.admin-controls{display:flex;gap:8px;flex-wrap:wrap}.admin-controls .btn{flex:1}.admin-message{font-size:.8rem;overflow-wrap:anywhere}
 @media(max-width:360px){.compact-grid{grid-template-columns:1fr}.settings-panel summary{padding:11px 12px}.choice-row{grid-auto-flow:row;grid-template-columns:1fr 1fr}}
 `;
     document.head.appendChild(st);
