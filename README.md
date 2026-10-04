@@ -1,6 +1,6 @@
 # Menu
 
-PWA per piu menu nominati. Importa da foto o file, correggi a mano, consulta oggi e le settimane.
+PWA per piu menu nominati. Importa un JSON da un AI, oppure compila a mano. La copia che non si perde e il file menu-libreria.json.
 
 ## Link
 
@@ -10,7 +10,7 @@ PWA per piu menu nominati. Importa da foto o file, correggi a mano, consulta ogg
 ## Uso
 
 1. Apri il link sul telefono.
-2. Chrome, menu, Aggiungi a schermata Home.
-3. Tab Importa: nome del menu, foto o file.
-4. Controlla il testo riconosciuto e salva.
-5. In alto scegli quale menu e attivo.
+2. Chrome o Safari, Aggiungi a schermata Home.
+3. Tab Importa: JSON da un AI, oppure menu vuoto e tabella a mano.
+4. Salva copia: tieni il file in File o iCloud.
+5. Su un altro telefono, o dopo pulisci memoria: Carica copia.

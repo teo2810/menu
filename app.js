@@ -201,20 +201,12 @@
       return mealObj && (mealObj.primo || mealObj.secondo || mealObj.contorno || mealObj.frutta || mealObj.merenda);
     });
     var hint = emptyWeek
-      ? '<div class="note">Menu vuoto: tocca una cella per scrivere, oppure torna a Importa per un JSON o una foto. Per cambiare menu usa il nome in alto.</div><button class="btn btn-ghost btn-wide" id="backImport">Torna a Importa</button>'
+      ? '<div class="note">Menu vuoto: tocca una cella per scrivere, oppure torna a Importa per un JSON. Per cambiare menu usa il nome in alto.</div><button class="btn btn-ghost btn-wide" id="backImport">Torna a Importa</button>'
       : '<p class="status">Tocca una cella: si apre la riga sopra la tastiera.</p>';
     box.innerHTML = (tabs?"<div class=week-tabs>"+tabs+"</div>":"")+"<div class=day-rail>"+chips+"</div>"+mealHtml(m.weeks[state.week].days[state.day],state.week,state.day)+
       '<div class="meal-card"><h2>Tabella settimana</h2>'+hint+weekGridHtml(m.weeks[state.week], state.week, true)+"</div>";
   }
   function wireImport(){
-    var foto = document.getElementById("btnFoto");
-    var file = document.getElementById("btnFile");
-    var cam = document.getElementById("fileCam");
-    var any = document.getElementById("fileAny");
-    if (foto && cam) foto.onclick = function(){ cam.click(); };
-    if (file && any) file.onclick = function(){ any.click(); };
-    if (cam) cam.onchange = function(e){ handleFile(e.target.files[0]); };
-    if (any) any.onchange = function(e){ handleFile(e.target.files[0]); };
     var blank = document.getElementById("btnBlank");
     if (blank) blank.onclick = function(){
       var el = document.getElementById("imp-name");
@@ -222,27 +214,27 @@
       var created = makeMenu({ name:name });
       state.menus.push(created); state.activeId = created.id; saveLibrary();
       toast("Apri la tabella e tocca le celle"); goTab("settimane"); renderAll();
+      offerLibraryCopy();
     };
     var jsonBtn = document.getElementById("btnJsonFile");
     var jsonFile = document.getElementById("fileJson");
     if (jsonBtn && jsonFile) jsonBtn.onclick = function(){ jsonFile.click(); };
-    if (jsonFile) jsonFile.onchange = function(e){ handleJsonFile(e.target.files[0]); };
+    if (jsonFile) jsonFile.onchange = function(e){ handleLibraryPick(e.target.files[0]); e.target.value = ""; };
     var jsonApply = document.getElementById("applyJsonPaste");
     if (jsonApply) jsonApply.onclick = function(){ applyJsonText(document.getElementById("jsonPaste").value); };
     var copyBtn = document.getElementById("copyPrompt");
     if (copyBtn) copyBtn.onclick = function(){ copyPromptText(); };
-    var saveKey = document.getElementById("saveGeminiKey");
-    if (saveKey) saveKey.onclick = function(){
-      var inp = document.getElementById("geminiKey");
-      var val = inp ? inp.value.trim() : "";
-      try {
-        if (val) localStorage.setItem(GEMINI_STORE, val);
-        else localStorage.removeItem(GEMINI_STORE);
-      } catch (e) {}
-      toast(val ? "Chiave salvata su questo telefono" : "Chiave tolta");
-      renderImporta();
-      wireImport();
-    };
+    document.querySelectorAll("[data-save-copy]").forEach(function(b){
+      b.onclick = function(){ offerLibraryCopy(); };
+    });
+    document.querySelectorAll("[data-load-copy]").forEach(function(b){
+      b.onclick = function(){
+        var inp = document.getElementById("fileLibrary");
+        if (inp) inp.click();
+      };
+    });
+    var libFile = document.getElementById("fileLibrary");
+    if (libFile) libFile.onchange = function(e){ handleLibraryPick(e.target.files[0]); e.target.value = ""; };
   }
   var TINTS = [
     { id:"rosa", name:"Rosa", swatch:"#F6D4E0", theme:"#F6D4E0" },
@@ -293,7 +285,7 @@
             "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M4 7h16'/><path d='M9 7V5h6v2'/><path d='M7 7l1 13h8l1-13'/></svg></button></span></div>";
         }).join("")
       : "<div class=note>Ancora nessun menu. Vai su Importa.</div>";
-    box.innerHTML = tintCardHtml() + list;
+    box.innerHTML = tintCardHtml() + libraryCardHtml(false) + list;
   }
   function bind(){
     document.querySelectorAll(".course").forEach(function(el){
@@ -502,17 +494,21 @@
       '<div class="drop" style="margin-bottom:10px"><h3>Crea menu vuoto</h3><p>Parti dalla tabella e compila a mano. In alto cambi menu o torni qui.</p>' +
       '<div class="field" style="text-align:left"><label>Nome</label><input id="imp-name" placeholder="es. Menu settembre"></div>' +
       '<button class="btn btn-primary btn-wide" id="btnBlank">Crea e apri la tabella</button></div>' +
-      '<div class="meal-card"><h2>Da un AI</h2><p class="status">Copia il prompt e allegalo a foto o PDF in ChatGPT, Gemini, Copilot, Grok, Claude, Perplexity o un altra chat: vale ovunque accetti testo + file. Poi incolla qui il JSON.</p>' +
+      '<div class="meal-card"><h2>Da un AI</h2><p class="status">Copia il prompt e allegalo a foto o PDF in una chat. Poi incolla qui il JSON, oppure carica il file.</p>' +
       '<div class="prompt-row"><span class="prompt-ph">Prompt 4 settimane</span><button type=button class="btn btn-ghost" id="copyPrompt">Copia</button></div>' +
       '<textarea id="promptBox" hidden>'+esc(AI_PROMPT)+"</textarea>" +
       '<div class="field"><label>JSON</label><textarea id="jsonPaste" placeholder="{ ... }"></textarea></div>' +
       '<div class="actions"><button class="btn btn-primary" id="applyJsonPaste">Importa JSON</button><button class="btn btn-ghost" id="btnJsonFile">File .json</button></div>' +
       '<input id="fileJson" type="file" accept=".json,application/json" hidden></div>' +
-      '<div id="importWork"></div>' +
-      '<div class="meal-card"><h2>Bozza OCR</h2><p class="status">Precompila la tabella. Controlla le celle.</p>' +
-      '<div class="actions"><button class="btn btn-ghost" id="btnFoto">Foto</button><button class="btn btn-ghost" id="btnFile">PDF o foto</button></div>' +
-      '<input id="fileCam" type="file" accept="image/*" capture="environment" hidden>' +
-      '<input id="fileAny" type="file" accept="image/*,application/pdf" hidden></div></div>';
+      libraryCardHtml(true) +
+      '</div>';
+  }
+
+  function libraryCardHtml(withInput){
+    return '<div class="meal-card"><h2>Copia che non si perde</h2><p class="status">Quello su questo telefono si cancella se pulisci la memoria del sito. Salva il file in File o iCloud e ricaricalo qui, anche da un altro dispositivo.</p>' +
+      '<div class="actions"><button type=button class="btn btn-primary" data-save-copy>Salva copia</button><button type=button class="btn btn-ghost" data-load-copy>Carica copia</button></div>' +
+      (withInput ? '<input id="fileLibrary" type="file" accept=".json,application/json" hidden>' : '') +
+      '</div>';
   }
 
   function loadScript(src){ return new Promise(function(res,rej){ var s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=function(){rej(new Error("script"));}; document.head.appendChild(s); }); }
@@ -1172,6 +1168,76 @@
     var created=makeMenu(norm);
     state.menus.push(created); state.activeId=created.id; saveLibrary();
     toast("Menu salvato: "+created.name); goTab("settimane"); renderAll();
+    offerLibraryCopy();
+  }
+  function libraryPayload(){
+    return { kind:"menu-library", version:1, menus: state.menus, activeId: state.activeId };
+  }
+  function libraryFile(){
+    var blob = new Blob([JSON.stringify(libraryPayload(), null, 2)], { type:"application/json" });
+    return new File([blob], "menu-libreria.json", { type:"application/json" });
+  }
+  function offerLibraryCopy(){
+    if (!state.menus.length) { toast("Nessun menu da salvare"); return; }
+    var file = libraryFile();
+    var download = function(){
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(file);
+      a.download = "menu-libreria.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast("File scaricato: aprilo in File e tienilo");
+    };
+    if (navigator.share && navigator.canShare && navigator.canShare({ files:[file] })) {
+      navigator.share({ files:[file], title:"Menu" }).then(function(){
+        toast("Copia pronta: salvala in File o iCloud");
+      }).catch(function(err){
+        if (err && err.name === "AbortError") return;
+        download();
+      });
+      return;
+    }
+    download();
+  }
+  function isLibraryFile(obj){
+    return !!(obj && Array.isArray(obj.menus) && (obj.kind === "menu-library" || obj.version === 1));
+  }
+  function applyLibraryObject(obj){
+    var menus = obj.menus.map(function(m, i){
+      var norm = validateAndNormalizeMenuJson(m);
+      return makeMenu({ id: m.id || ("menu-" + Date.now() + "-" + i), name: norm.name, period: norm.period, weeks: norm.weeks });
+    });
+    state.menus = menus;
+    var wanted = obj.activeId;
+    state.activeId = menus.some(function(m){ return m.id === wanted; }) ? wanted : (menus[0] ? menus[0].id : null);
+    saveLibrary();
+    toast("Caricati " + menus.length + " menu");
+    goTab("oggi");
+    renderAll();
+  }
+  function confirmLibrary(obj){
+    if (!obj.menus.length) { toast("Il file non contiene menu"); return; }
+    var run = function(){ applyLibraryObject(obj); };
+    if (state.menus.length) {
+      ask("Sostituire i menu di questo telefono?", "Il file ne contiene " + obj.menus.length + ". Quelli solo su questo telefono vengono sostituiti.", "Carica", run);
+      return;
+    }
+    run();
+  }
+  function handleLibraryPick(file){
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try {
+        var raw = String(reader.result || "");
+        var obj = extractJsonObject(raw);
+        if (isLibraryFile(obj)) confirmLibrary(obj);
+        else applyJsonText(raw);
+      } catch (err) { toast("File non valido: " + err.message); }
+    };
+    reader.onerror = function(){ toast("Impossibile leggere il file"); };
+    reader.readAsText(file);
   }
   function applyJsonText(raw){
     try{
