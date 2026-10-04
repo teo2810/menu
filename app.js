@@ -356,6 +356,7 @@
       '<div class="meal-card"><h2>Tabella settimana</h2>'+hint+weekGridHtml(m.weeks[state.week], state.week, true)+"</div>";
   }
   function wireImport(){
+    var exportSelected=document.getElementById("exportSelected"); if(exportSelected) exportSelected.onclick=exportSelectedMenus;
     var blank = document.getElementById("btnBlank");
     if (blank) blank.onclick = function(){
       var el = document.getElementById("imp-name");
@@ -674,8 +675,27 @@
       '<div class="field"><label>JSON</label><textarea id="jsonPaste" placeholder="{ ... }"></textarea></div>' +
       '<div class="actions"><button class="btn btn-primary" id="applyJsonPaste">Importa JSON</button><button class="btn btn-ghost" id="btnJsonFile">File .json</button></div>' +
       '<input id="fileJson" type="file" accept=".json,application/json" hidden></div>' +
-      libraryCardHtml(true) +
+      exportCardHtml() + libraryCardHtml(true) +
       '</div>';
+  }
+
+  function exportSelectedMenus(){
+    if(!state.menus.length){toast("Nessun menu da esportare");return;}
+    var chosen=Array.prototype.filter.call(document.querySelectorAll("[data-export-menu]"),function(x){return x.checked;}).map(function(x){return x.value;});
+    if(!chosen.length){toast("Seleziona almeno un menu");return;}
+    var menus=state.menus.filter(function(m){return chosen.indexOf(m.id)>=0;});
+    var payload=menus.length===1 ? menus[0] : {kind:"menu-library",version:2,menus:menus,activeId:menus[0].id};
+    var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download=menus.length===1 ? (sectionId(menus[0].name,0)||"menu")+".json" : "menu-selezionati.json";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+    toast(menus.length===1?"Menu esportato":menus.length+" menu esportati");
+  }
+  function exportCardHtml(){
+    if(!state.menus.length) return "";
+    return '<div class="meal-card"><h2>Esporta menu</h2><p class=status>Scegli uno o più menu. Un menu mantiene il formato singolo; più menu creano un backup V2.</p>'+
+      state.menus.map(function(m){return '<label class=pick-row><span>'+esc(m.name)+'</span><input type=checkbox data-export-menu value="'+esc(m.id)+'" '+(m.id===state.activeId?"checked":"")+'></label>';}).join("")+
+      '<button type=button class="btn btn-primary btn-wide" id=exportSelected>Esporta selezionati</button></div>';
   }
 
   function libraryCardHtml(withInput){
