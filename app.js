@@ -8,6 +8,64 @@
   ];
   var STORE = "menu-library-v3";
   var GEMINI_STORE = "menu-gemini-key-v1";
+  var API_BASE = "https://menu-api.teofalce.workers.dev";
+  var OFFICIAL_INDEX = "./data/menus.json";
+  var OFFICIAL_STORE = "menu-official-cache-v1";
+
+  function loadOfficialCache(){
+    try { return JSON.parse(localStorage.getItem(OFFICIAL_STORE) || "[]"); } catch(e) { return []; }
+  }
+  function saveOfficialCache(items){
+    try { localStorage.setItem(OFFICIAL_STORE, JSON.stringify(items || [])); } catch(e) {}
+  }
+  function mergeOfficialMenus(items){
+    if (!Array.isArray(items)) return false;
+    var changed = false;
+    items.forEach(function(remote){
+      if (!remote || !remote.id || !Array.isArray(remote.weeks)) return;
+      remote._official = true;
+      var i = state.menus.findIndex(function(x){ return x.id === remote.id; });
+      if (i < 0) { state.menus.push(remote); changed = true; }
+      else if (state.menus[i]._official && JSON.stringify(state.menus[i]) !== JSON.stringify(remote)) {
+        state.menus[i] = remote; changed = true;
+      }
+    });
+    if (changed) {
+      if (!state.activeId && state.menus[0]) state.activeId = state.menus[0].id;
+      saveLibrary();
+    }
+    return changed;
+  }
+  async function syncOfficialMenus(){
+    try {
+      var res = await fetch(OFFICIAL_INDEX, { cache:"no-store" });
+      if (!res.ok) throw new Error("catalog");
+      var catalog = await res.json();
+      var entries = Array.isArray(catalog) ? catalog : (catalog.menus || []);
+      var menus = await Promise.all(entries.map(async function(entry){
+        if (entry && entry.weeks) return entry;
+        if (!entry || !entry.file) return null;
+        var r = await fetch(entry.file, { cache:"no-store" });
+        return r.ok ? r.json() : null;
+      }));
+      menus = menus.filter(Boolean);
+      saveOfficialCache(menus);
+      if (mergeOfficialMenus(menus)) renderAll();
+    } catch(e) {
+      mergeOfficialMenus(loadOfficialCache());
+    }
+  }
+  async function submitReport(menuId, context, message, website){
+    var res = await fetch(API_BASE + "/api/reports", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({menu_id:menuId, context:context, message:message, website:website || ""})
+    });
+    var data = {};
+    try { data = await res.json(); } catch(e) {}
+    if (!res.ok || !data.ok) throw new Error(data.error || "Invio non riuscito");
+    return data;
+  }
   function getGeminiKey(){
     try { return (localStorage.getItem(GEMINI_STORE) || "").trim(); } catch (e) { return ""; }
   }
@@ -138,6 +196,28 @@
   }
 
   function renderHeader(){
+
+    var sendReport = document.getElementById("sendReport");
+    if (sendReport) sendReport.onclick = async function(){
+      var m = currentMenu();
+      var contextEl = document.getElementById("reportContext");
+      var messageEl = document.getElementById("reportMessage");
+      var websiteEl = document.getElementById("reportWebsite");
+      var message = (messageEl && messageEl.value || "").trim();
+      if (!m || message.length < 3) { toast("Scrivi una segnalazione"); return; }
+      var old = sendReport.textContent;
+      sendReport.disabled = true; sendReport.textContent = "Invio...";
+      try {
+        await submitReport(m.id, (contextEl && contextEl.value || "").trim(), message, websiteEl && websiteEl.value || "");
+        if (messageEl) messageEl.value = "";
+        if (contextEl) contextEl.value = "";
+        toast("Segnalazione inviata");
+      } catch(e) {
+        toast(e.message || "Invio non riuscito");
+      } finally {
+        sendReport.disabled = false; sendReport.textContent = old;
+      }
+    };
     var pick = document.getElementById("menuPick");
     if (!pick) return;
     var m = currentMenu();
@@ -274,6 +354,17 @@
     }).join("");
     return "<div class='meal-card tint-card'><div class=tint-head><b>Tinta</b><span class=status id=tintName>"+name+"</span></div><div class=tint-rail>"+dots+"</div></div>";
   }
+
+  function reportCardHtml(){
+    var m = currentMenu();
+    if (!m) return "";
+    return "<div class='meal-card report-card'><h2>Segnala un problema</h2>"+
+      "<p class=status>La segnalazione viene inviata senza nome, email o telefono.</p>"+
+      "<div class=field><label>Riferimento</label><input id=reportContext maxlength=500 placeholder='Es. Seconda settimana · Martedi'></div>"+
+      "<div class=field><label>Problema</label><textarea id=reportMessage maxlength=1000 placeholder='Descrivi cosa non torna'></textarea></div>"+
+      "<input id=reportWebsite tabindex=-1 autocomplete=off aria-hidden=true style='position:absolute;left:-9999px;width:1px;height:1px'>"+
+      "<button type=button class='btn btn-primary btn-wide' id=sendReport>Invia segnalazione</button></div>";
+  }
   function renderInfo(){
     var box = document.getElementById("screen-info");
     var list = state.menus.length
@@ -285,7 +376,7 @@
             "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M4 7h16'/><path d='M9 7V5h6v2'/><path d='M7 7l1 13h8l1-13'/></svg></button></span></div>";
         }).join("")
       : "<div class=note>Ancora nessun menu. Vai su Importa.</div>";
-    box.innerHTML = tintCardHtml() + libraryCardHtml(false) + list;
+    box.innerHTML = tintCardHtml() + libraryCardHtml(false) + reportCardHtml() + list;
   }
   function bind(){
     document.querySelectorAll(".course").forEach(function(el){
@@ -1275,4 +1366,5 @@
   if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(function(){});
   applyTint(currentTintId());
   renderAll();
+  syncOfficialMenus();
 })();
