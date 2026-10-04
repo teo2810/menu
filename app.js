@@ -227,6 +227,29 @@
     return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
   }
 
+  function parseDateOnly(v){ if(!v) return null; var p=String(v).split("-"); if(p.length!==3) return null; return new Date(+p[0],+p[1]-1,+p[2],12,0,0); }
+  function menuIsValidOn(menu,date){
+    var t=new Date(date.getFullYear(),date.getMonth(),date.getDate(),12).getTime();
+    var a=parseDateOnly(menu.validFrom), b=parseDateOnly(menu.validTo);
+    return (!a || t>=a.getTime()) && (!b || t<=b.getTime());
+  }
+  function weekIndexForDate(menu,date){
+    var weeks=(menu.weeks||[]).length || 1;
+    if(menu.cycle && menu.cycle.mode==="single") return 0;
+    var start=parseDateOnly(menu.validFrom);
+    if(start){
+      var delta=Math.floor((new Date(date.getFullYear(),date.getMonth(),date.getDate(),12)-start)/604800000);
+      return ((delta%weeks)+weeks)%weeks;
+    }
+    return (isoWeekNumber(date)-1)%weeks;
+  }
+  function validityText(menu){
+    if(menu.validFrom && menu.validTo) return "Valido "+menu.validFrom+" → "+menu.validTo;
+    if(menu.validFrom) return "Valido dal "+menu.validFrom;
+    if(menu.validTo) return "Valido fino al "+menu.validTo;
+    return "";
+  }
+
   function renderHeader(){
 
     var saveMenuSettings=document.getElementById("saveMenuSettings");
@@ -276,11 +299,11 @@
     pick.textContent = m ? m.name : "Scegli menu";
     document.getElementById("periodPill").textContent = (m && (m.period || m.name)) || "Senza periodo";
   }
-  function dishFilled(m){
-    return !!(m && (String(m.primo||"").trim() || String(m.secondo||"").trim() || String(m.contorno||"").trim() || String(m.frutta||"").trim() || String(m.merenda||"").trim()));
+  function dishFilled(m,menu){
+    return !!(m && sectionsOf(menu||currentMenu()).some(function(sec){ return String(m[sec.id]||"").trim(); }));
   }
   function weekFilled(w){
-    return !!(w && DAYS.some(function(d){ return dishFilled(w.days && w.days[d.id]); }));
+    return !!(w && DAYS.some(function(d){ return dishFilled(w.days && w.days[d.id], currentMenu()); }));
   }
   function filledWeekIdx(menu){
     var out=[];
@@ -305,9 +328,11 @@
     var map = {1:"lunedi",2:"martedi",3:"mercoledi",4:"giovedi",5:"venerdi"};
     var dayId = map[now.getDay()];
     var vis = filledWeekIdx(m);
-    var week = vis.length===1 ? vis[0] : (vis.length ? vis[(isoWeekNumber(now)-1)%vis.length] : (isoWeekNumber(now)-1)%4);
+    var calculated=weekIndexForDate(m,now); var week=vis.length===1 ? vis[0] : (vis.length ? (vis.indexOf(calculated)>=0?calculated:vis[calculated%vis.length]) : calculated);
     var nice = now.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"});
-    box.innerHTML = "<div class=hero-today><div class=kicker>"+esc(m.name)+"</div><h2>"+nice+"</h2></div>"+(dayId?mealHtml(m.weeks[week].days[dayId],week,dayId):"<div class=meal-card><p>Oggi non c e mensa.</p></div>");
+    var validity=validityText(m);
+    if(!menuIsValidOn(m,now)){ box.innerHTML="<div class=hero-today><div class=kicker>"+esc(m.name)+"</div><h2>"+nice+"</h2></div><div class='meal-card empty'><h2>Menu non attivo oggi</h2><p class=status>"+esc(validity||"Controlla il periodo di validità.")+"</p></div>"; return; }
+    box.innerHTML = "<div class=hero-today><div class=kicker>"+esc(m.name)+(validity?" · "+esc(validity):"")+"</div><h2>"+nice+"</h2></div>"+(dayId&&m.weeks[week]?mealHtml(m.weeks[week].days[dayId],week,dayId):"<div class=meal-card><p>Nessun menu previsto oggi.</p></div>");
   }
   function renderSettimane(){
     var box = document.getElementById("screen-settimane");
@@ -335,7 +360,10 @@
     if (blank) blank.onclick = function(){
       var el = document.getElementById("imp-name");
       var name = ((el && el.value.trim()) || "Menu vuoto").trim();
-      var created = makeMenu({ name:name });
+      var kind=(document.getElementById("imp-type")||{}).value || "school";
+      var cycle=kind==="event" ? {mode:"single",weeks:1} : {mode:"weekly",weeks:4};
+      var secs=kind==="event" ? [{id:"antipasto",label:"Antipasto"},{id:"primo",label:"Primo"},{id:"secondo",label:"Secondo"},{id:"dolce",label:"Dolce"},{id:"bevande",label:"Bevande"}] : DEFAULT_SECTIONS.slice();
+      var created = makeMenu({ name:name, type:kind, cycle:cycle, sections:secs, weeks:kind==="event"?[{name:"Menu",days:emptyDays()}]:undefined });
       state.menus.push(created); state.activeId = created.id; saveLibrary();
       toast("Apri la tabella e tocca le celle"); goTab("settimane"); renderAll();
       offerLibraryCopy();
@@ -638,7 +666,7 @@
     box.innerHTML =
       '<div id="importa-compact">' +
       '<div class="drop" style="margin-bottom:10px"><h3>Crea menu vuoto</h3><p>Parti dalla tabella e compila a mano. In alto cambi menu o torni qui.</p>' +
-      '<div class="field" style="text-align:left"><label>Nome</label><input id="imp-name" placeholder="es. Menu settembre"></div>' +
+      '<div class="field" style="text-align:left"><label>Nome</label><input id="imp-name" placeholder="es. Menu settembre"></div><div class="field" style="text-align:left"><label>Tipo</label><select id="imp-type"><option value="school">Scuola</option><option value="work">Lavoro</option><option value="event">Evento / festa</option><option value="other">Altro</option></select></div>' +
       '<button class="btn btn-primary btn-wide" id="btnBlank">Crea e apri la tabella</button></div>' +
       '<div class="meal-card"><h2>Da un AI</h2><p class="status">Copia il prompt e allegalo a foto o PDF in una chat. Poi incolla qui il JSON, oppure carica il file.</p>' +
       '<div class="prompt-row"><span class="prompt-ph">Prompt 4 settimane</span><button type=button class="btn btn-ghost" id="copyPrompt">Copia</button></div>' +
