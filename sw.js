@@ -1,9 +1,13 @@
-const CACHE = "menu-app-o";
+const CACHE = "menu-app-v5";
 const ASSETS = [
-  "./index.html", "./app.js", "./manifest.json",
+  "./index.html", "./app.js", "./manifest.json", "./data/menus.json",
   "./icon-192.png", "./icon-512.png",
   "./icons/primo.png", "./icons/secondo.png", "./icons/contorno.png",
   "./icons/frutta.png", "./icons/merenda.png",
+  "./icons/antipasto.svg", "./icons/dolce.svg", "./icons/bevande.svg",
+  "./icons/insalata.svg", "./icons/pesce.svg", "./icons/formaggio.svg",
+  "./icons/pane.svg", "./icons/yogurt.svg", "./icons/acqua.svg",
+  "./icons/succo.svg", "./icons/zuppa.svg",
   "./icons/tab-oggi.png", "./icons/tab-settimane.png",
   "./icons/tab-importa.png", "./icons/tab-menu.png"
 ];

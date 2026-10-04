@@ -8,15 +8,105 @@
   ];
   var STORE = "menu-library-v3";
   var GEMINI_STORE = "menu-gemini-key-v1";
+  var API_BASE = "https://menu-api.teofalce.workers.dev";
+  var OFFICIAL_INDEX = "./data/menus.json";
+  var OFFICIAL_STORE = "menu-official-cache-v1";
+
+  function loadOfficialCache(){
+    try { return JSON.parse(localStorage.getItem(OFFICIAL_STORE) || "[]"); } catch(e) { return []; }
+  }
+  function saveOfficialCache(items){
+    try { localStorage.setItem(OFFICIAL_STORE, JSON.stringify(items || [])); } catch(e) {}
+  }
+  function mergeOfficialMenus(items){
+    if (!Array.isArray(items)) return false;
+    var changed = false;
+    items.forEach(function(remote){
+      if (!remote || !remote.id || !Array.isArray(remote.weeks)) return;
+      remote._official = true;
+      var i = state.menus.findIndex(function(x){ return x.id === remote.id; });
+      if (i < 0) { state.menus.push(remote); changed = true; }
+      else if (state.menus[i]._official && JSON.stringify(state.menus[i]) !== JSON.stringify(remote)) {
+        state.menus[i] = remote; changed = true;
+      }
+    });
+    if (changed) {
+      if (!state.activeId && state.menus[0]) state.activeId = state.menus[0].id;
+      saveLibrary();
+    }
+    return changed;
+  }
+  async function syncOfficialMenus(){
+    try {
+      var res = await fetch(OFFICIAL_INDEX, { cache:"no-store" });
+      if (!res.ok) throw new Error("catalog");
+      var catalog = await res.json();
+      var entries = Array.isArray(catalog) ? catalog : (catalog.menus || []);
+      var menus = await Promise.all(entries.map(async function(entry){
+        if (entry && entry.weeks) return entry;
+        if (!entry || !entry.file) return null;
+        var r = await fetch(entry.file, { cache:"no-store" });
+        return r.ok ? r.json() : null;
+      }));
+      menus = menus.filter(Boolean);
+      saveOfficialCache(menus);
+      if (mergeOfficialMenus(menus)) renderAll();
+    } catch(e) {
+      mergeOfficialMenus(loadOfficialCache());
+    }
+  }
+  async function submitReport(menuId, context, message, website){
+    var res = await fetch(API_BASE + "/api/reports", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({menu_id:menuId, context:context, message:message, website:website || ""})
+    });
+    var data = {};
+    try { data = await res.json(); } catch(e) {}
+    if (!res.ok || !data.ok) throw new Error(data.error || "Invio non riuscito");
+    return data;
+  }
   function getGeminiKey(){
     try { return (localStorage.getItem(GEMINI_STORE) || "").trim(); } catch (e) { return ""; }
   }
-  function meal(){ return {primo:"",primoA:"",secondo:"",secondoA:"",contorno:"",contornoA:"",frutta:"",fruttaA:"",merenda:"",merendaA:""}; }
+  var DEFAULT_SECTIONS=[{id:"primo",label:"Primo"},{id:"secondo",label:"Secondo"},{id:"contorno",label:"Contorno"},{id:"frutta",label:"Frutta"},{id:"merenda",label:"Merenda"}];
+  function sectionsOf(menu){ return menu && Array.isArray(menu.sections) && menu.sections.length ? menu.sections : DEFAULT_SECTIONS; }
+  function sectionId(label,i){
+    var known={primo:"primo",secondo:"secondo",contorno:"contorno",frutta:"frutta",merenda:"merenda"};
+    var low=String(label||"").trim().toLowerCase();
+    if(known[low]) return known[low];
+    var slug=low.normalize ? low.normalize("NFD").replace(/[\u0300-\u036f]/g,"") : low;
+    slug=slug.replace(/[^a-z0-9]+/g,"").slice(0,24);
+    return slug || ("section"+(i+1));
+  }
+  function meal(sections){
+    var o={};
+    (sections||DEFAULT_SECTIONS).forEach(function(sec){ o[sec.id]=""; o[sec.id+"A"]=""; });
+    return o;
+  }
+  function ensureMealShape(day,sections){
+    day=day||{};
+    sectionsOf({sections:sections}).forEach(function(sec){
+      if(day[sec.id]==null) day[sec.id]="";
+      if(day[sec.id+"A"]==null) day[sec.id+"A"]="";
+    });
+    return day;
+  }
   function aKeyOf(course){ return course + "A"; }
-  function emptyDays(){ var o={}; DAYS.forEach(function(d){ o[d.id]=meal(); }); return o; }
+  function emptyDays(sections){ var o={}; DAYS.forEach(function(d){ o[d.id]=meal(sections); }); return o; }
   function makeMenu(p){
     p = p || {};
-    return { id: p.id || ("menu-" + Date.now()), name: p.name || "Nuovo menu", period: p.period || "", weeks: p.weeks || [
+    return {
+      schemaVersion: 2,
+      id: p.id || ("menu-" + Date.now()),
+      name: p.name || "Nuovo menu",
+      type: p.type || "school",
+      period: p.period || "",
+      validFrom: p.validFrom || "",
+      validTo: p.validTo || "",
+      cycle: p.cycle || { mode:"weekly", weeks:4 },
+      sections: Array.isArray(p.sections) && p.sections.length ? p.sections : DEFAULT_SECTIONS.slice(),
+      weeks: p.weeks || [
       { name:"Prima settimana", days:emptyDays() },
       { name:"Seconda settimana", days:emptyDays() },
       { name:"Terza settimana", days:emptyDays() },
@@ -64,13 +154,24 @@
     });
   }
 
-  var ICONS = {
-    primo:   '<img src="icons/primo.png" alt="" width="36" height="36">',
-    secondo: '<img src="icons/secondo.png" alt="" width="36" height="36">',
-    contorno:'<img src="icons/contorno.png" alt="" width="36" height="36">',
-    frutta:  '<img src="icons/frutta.png" alt="" width="36" height="36">',
-    merenda: '<img src="icons/merenda.png" alt="" width="36" height="36">'
+  var ICON_FILES={
+    primo:"primo.png",secondo:"secondo.png",contorno:"contorno.png",frutta:"frutta.png",merenda:"merenda.png",
+    antipasto:"antipasto.svg",dolce:"dolce.svg",bevande:"bevande.svg",bevanda:"bevande.svg",
+    insalata:"insalata.svg",pesce:"pesce.svg",formaggio:"formaggio.svg",pane:"pane.svg",
+    yogurt:"yogurt.svg",acqua:"acqua.svg",succo:"succo.svg",zuppa:"zuppa.svg"
   };
+  function iconForSection(sec){
+    var id=String(sec&&sec.id||"").toLowerCase(), label=String(sec&&sec.label||"").toLowerCase();
+    var aliases=[
+      [/antipast|starter/,"antipasto"],[/dolce|dessert|torta|cake/,"dolce"],[/bev|drink/,"bevande"],
+      [/insalat|verdura|salad/,"insalata"],[/pesc|fish/,"pesce"],[/formagg|cheese/,"formaggio"],
+      [/pane|bread/,"pane"],[/yogurt/,"yogurt"],[/acqua|water/,"acqua"],[/succo|juice/,"succo"],[/zuppa|soup|minestra/,"zuppa"]
+    ];
+    var key=ICON_FILES[id]?id:"";
+    if(!key) aliases.some(function(x){if(x[0].test(label)){key=x[1];return true;}return false;});
+    if(key) return '<img src="icons/'+ICON_FILES[key]+'" alt="" width="36" height="36">';
+    return '<span class=generic-food-icon aria-hidden=true>🍽</span>';
+  }
   var ALLERGENS = {
     1:"Glutine", 2:"Crostacei", 3:"Uova", 4:"Pesce", 5:"Arachidi",
     6:"Soia", 7:"Latte", 8:"Frutta a guscio", 9:"Sedano", 10:"Senape",
@@ -137,6 +238,29 @@
     return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
   }
 
+  function parseDateOnly(v){ if(!v) return null; var p=String(v).split("-"); if(p.length!==3) return null; return new Date(+p[0],+p[1]-1,+p[2],12,0,0); }
+  function menuIsValidOn(menu,date){
+    var t=new Date(date.getFullYear(),date.getMonth(),date.getDate(),12).getTime();
+    var a=parseDateOnly(menu.validFrom), b=parseDateOnly(menu.validTo);
+    return (!a || t>=a.getTime()) && (!b || t<=b.getTime());
+  }
+  function weekIndexForDate(menu,date){
+    var weeks=(menu.weeks||[]).length || 1;
+    if(menu.cycle && menu.cycle.mode==="single") return 0;
+    var start=parseDateOnly(menu.validFrom);
+    if(start){
+      var delta=Math.floor((new Date(date.getFullYear(),date.getMonth(),date.getDate(),12)-start)/604800000);
+      return ((delta%weeks)+weeks)%weeks;
+    }
+    return (isoWeekNumber(date)-1)%weeks;
+  }
+  function validityText(menu){
+    if(menu.validFrom && menu.validTo) return "Valido "+menu.validFrom+" → "+menu.validTo;
+    if(menu.validFrom) return "Valido dal "+menu.validFrom;
+    if(menu.validTo) return "Valido fino al "+menu.validTo;
+    return "";
+  }
+
   function renderHeader(){
     var pick = document.getElementById("menuPick");
     if (!pick) return;
@@ -149,29 +273,26 @@
     pick.textContent = m ? m.name : "Scegli menu";
     document.getElementById("periodPill").textContent = (m && (m.period || m.name)) || "Senza periodo";
   }
-  function dishFilled(m){
-    return !!(m && (String(m.primo||"").trim() || String(m.secondo||"").trim() || String(m.contorno||"").trim() || String(m.frutta||"").trim() || String(m.merenda||"").trim()));
+  function dishFilled(m,menu){
+    return !!(m && sectionsOf(menu||currentMenu()).some(function(sec){ return String(m[sec.id]||"").trim(); }));
   }
   function weekFilled(w){
-    return !!(w && DAYS.some(function(d){ return dishFilled(w.days && w.days[d.id]); }));
+    return !!(w && DAYS.some(function(d){ return dishFilled(w.days && w.days[d.id], currentMenu()); }));
   }
   function filledWeekIdx(menu){
     var out=[];
-    (menu && menu.weeks || []).forEach(function(w,i){ if (weekFilled(w)) out.push(i); });
+    (menu && menu.weeks || []).forEach(function(w,i){ if (w && DAYS.some(function(d){return dishFilled(w.days&&w.days[d.id],menu);})) out.push(i); });
     return out;
   }
   function mealHtml(d, weekIdx, dayId){
-    var rows = [
-      ["primo","Primo",d.primo,d.primoA],
-      ["secondo","Secondo",d.secondo,d.secondoA],
-      ["contorno","Contorno",d.contorno,d.contornoA||""],
-      ["frutta","Frutta",d.frutta,d.fruttaA||""],
-      ["merenda","Merenda",d.merenda,d.merendaA]
-    ].filter(function(x){ return x[2]; });
-    var body = rows.length ? rows.map(function(x){
-      return "<div class=course data-course="+x[0]+"><div class='ico svg-"+x[0]+"'>"+ICONS[x[0]]+"</div><div class=course-body><div class=label>"+x[1]+"</div><div class=dish>"+esc(x[2])+"</div><div class=hint>Tocca per gli allergeni</div></div>"+allergenBox(x[3])+"</div>";
+    var m=currentMenu();
+    var rows=sectionsOf(m).map(function(sec){ return [sec.id,sec.label,d&&d[sec.id],d&&d[sec.id+"A"]]; }).filter(function(x){return x[2];});
+    var body=rows.length ? rows.map(function(x){
+      var sec=sectionsOf(m).find(function(q){return q.id===x[0];}) || {id:x[0],label:x[1]}; var icon=iconForSection(sec);
+      return "<div class=course data-course="+x[0]+"><div class='ico svg-"+x[0]+"'>"+icon+"</div><div class=course-body><div class=label>"+esc(x[1])+"</div><div class=dish>"+esc(x[2])+"</div><div class=hint>Tocca per gli allergeni</div></div>"+allergenBox(x[3])+"</div>";
     }).join("") : "<p class=status>Giorno vuoto. Tocca Correggi.</p>";
-    return "<article class=meal-card><h2>"+DAYS.find(function(x){return x.id===dayId;}).label+" <button class=edit-btn data-edit="+weekIdx+":"+dayId+">Correggi</button></h2>"+body+"</article>";
+    var day=DAYS.find(function(x){return x.id===dayId;});
+    return "<article class=meal-card><h2>"+esc(day?day.label:dayId)+" <button class=edit-btn data-edit="+weekIdx+":"+dayId+">Correggi</button></h2>"+body+"</article>";
   }
   function renderOggi(){
     var box = document.getElementById("screen-oggi");
@@ -181,9 +302,11 @@
     var map = {1:"lunedi",2:"martedi",3:"mercoledi",4:"giovedi",5:"venerdi"};
     var dayId = map[now.getDay()];
     var vis = filledWeekIdx(m);
-    var week = vis.length===1 ? vis[0] : (vis.length ? vis[(isoWeekNumber(now)-1)%vis.length] : (isoWeekNumber(now)-1)%4);
+    var calculated=weekIndexForDate(m,now); var week=vis.length===1 ? vis[0] : (vis.length ? (vis.indexOf(calculated)>=0?calculated:vis[calculated%vis.length]) : calculated);
     var nice = now.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"});
-    box.innerHTML = "<div class=hero-today><div class=kicker>"+esc(m.name)+"</div><h2>"+nice+"</h2></div>"+(dayId?mealHtml(m.weeks[week].days[dayId],week,dayId):"<div class=meal-card><p>Oggi non c e mensa.</p></div>");
+    var validity=validityText(m);
+    if(!menuIsValidOn(m,now)){ box.innerHTML="<div class=hero-today><div class=kicker>"+esc(m.name)+"</div><h2>"+nice+"</h2></div><div class='meal-card empty'><h2>Menu non attivo oggi</h2><p class=status>"+esc(validity||"Controlla il periodo di validità.")+"</p></div>"; return; }
+    box.innerHTML = "<div class=hero-today><div class=kicker>"+esc(m.name)+(validity?" · "+esc(validity):"")+"</div><h2>"+nice+"</h2></div>"+(dayId&&m.weeks[week]?mealHtml(m.weeks[week].days[dayId],week,dayId):"<div class=meal-card><p>Nessun menu previsto oggi.</p></div>");
   }
   function renderSettimane(){
     var box = document.getElementById("screen-settimane");
@@ -198,7 +321,7 @@
     var chips = DAYS.map(function(d){ return "<button class='day-chip"+(d.id===state.day?" on":"")+"' data-day="+d.id+"><small>"+d.short+"</small><b>"+d.label.slice(0,3)+"</b></button>"; }).join("");
     var emptyWeek = !DAYS.some(function(d){
       var mealObj = m.weeks[state.week].days[d.id];
-      return mealObj && (mealObj.primo || mealObj.secondo || mealObj.contorno || mealObj.frutta || mealObj.merenda);
+      return mealObj && sectionsOf(m).some(function(sec){ return String(mealObj[sec.id]||"").trim(); });
     });
     var hint = emptyWeek
       ? '<div class="note">Menu vuoto: tocca una cella per scrivere, oppure torna a Importa per un JSON. Per cambiare menu usa il nome in alto.</div><button class="btn btn-ghost btn-wide" id="backImport">Torna a Importa</button>'
@@ -207,11 +330,15 @@
       '<div class="meal-card"><h2>Tabella settimana</h2>'+hint+weekGridHtml(m.weeks[state.week], state.week, true)+"</div>";
   }
   function wireImport(){
+    var exportSelected=document.getElementById("exportSelected"); if(exportSelected) exportSelected.onclick=exportSelectedMenus;
     var blank = document.getElementById("btnBlank");
     if (blank) blank.onclick = function(){
       var el = document.getElementById("imp-name");
       var name = ((el && el.value.trim()) || "Menu vuoto").trim();
-      var created = makeMenu({ name:name });
+      var kind=(document.getElementById("imp-type")||{}).value || "school";
+      var cycle=kind==="event" ? {mode:"single",weeks:1} : {mode:"weekly",weeks:4};
+      var secs=kind==="event" ? [{id:"antipasto",label:"Antipasto"},{id:"primo",label:"Primo"},{id:"secondo",label:"Secondo"},{id:"dolce",label:"Dolce"},{id:"bevande",label:"Bevande"}] : DEFAULT_SECTIONS.slice();
+      var created = makeMenu({ name:name, type:kind, cycle:cycle, sections:secs, weeks:kind==="event"?[{name:"Menu",days:emptyDays(secs)}]:undefined });
       state.menus.push(created); state.activeId = created.id; saveLibrary();
       toast("Apri la tabella e tocca le celle"); goTab("settimane"); renderAll();
       offerLibraryCopy();
@@ -274,6 +401,28 @@
     }).join("");
     return "<div class='meal-card tint-card'><div class=tint-head><b>Tinta</b><span class=status id=tintName>"+name+"</span></div><div class=tint-rail>"+dots+"</div></div>";
   }
+
+  function menuSettingsCardHtml(){
+    var m=currentMenu(); if(!m) return "";
+    var type=m.type||"school", cycle=(m.cycle&&m.cycle.mode)||"weekly";
+    return "<div class='meal-card'><h2>Impostazioni menu</h2>"+
+      "<div class=field><label>Tipo</label><select id=menuType><option value=school"+(type==="school"?" selected":"")+">Scuola</option><option value=work"+(type==="work"?" selected":"")+">Lavoro</option><option value=event"+(type==="event"?" selected":"")+">Evento / festa</option><option value=other"+(type==="other"?" selected":"")+">Altro</option></select></div>"+
+      "<div class=field><label>Periodo</label><input id=menuPeriod value='"+esc(m.period||"")+"' placeholder='Es. Menu invernale'></div>"+
+      "<div class=actions><div class=field><label>Valido dal</label><input id=menuValidFrom type=date value='"+esc(m.validFrom||"")+"'></div><div class=field><label>Al</label><input id=menuValidTo type=date value='"+esc(m.validTo||"")+"'></div></div>"+
+      "<div class=field><label>Ciclo</label><select id=menuCycle><option value=weekly"+(cycle==="weekly"?" selected":"")+">Settimanale ciclico</option><option value=single"+(cycle==="single"?" selected":"")+">Evento singolo</option></select></div>"+
+      "<div class=field><label>Sezioni</label><input id=menuSections value='"+esc((m.sections||[]).map(function(x){return x.label;}).join(", "))+"' placeholder='Antipasto, Primo, Secondo, Dolce'></div>"+
+      "<button type=button class='btn btn-primary btn-wide' id=saveMenuSettings>Salva impostazioni</button></div>";
+  }
+  function reportCardHtml(){
+    var m = currentMenu();
+    if (!m) return "";
+    return "<div class='meal-card report-card'><h2>Segnala un problema</h2>"+
+      "<p class=status>La segnalazione viene inviata senza nome, email o telefono.</p>"+
+      "<div class=field><label>Riferimento</label><input id=reportContext maxlength=500 placeholder='Es. Seconda settimana · Martedi'></div>"+
+      "<div class=field><label>Problema</label><textarea id=reportMessage maxlength=1000 placeholder='Descrivi cosa non torna'></textarea></div>"+
+      "<input id=reportWebsite tabindex=-1 autocomplete=off aria-hidden=true style='position:absolute;left:-9999px;width:1px;height:1px'>"+
+      "<button type=button class='btn btn-primary btn-wide' id=sendReport>Invia segnalazione</button></div>";
+  }
   function renderInfo(){
     var box = document.getElementById("screen-info");
     var list = state.menus.length
@@ -285,9 +434,36 @@
             "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M4 7h16'/><path d='M9 7V5h6v2'/><path d='M7 7l1 13h8l1-13'/></svg></button></span></div>";
         }).join("")
       : "<div class=note>Ancora nessun menu. Vai su Importa.</div>";
-    box.innerHTML = tintCardHtml() + libraryCardHtml(false) + list;
+    box.innerHTML = tintCardHtml() + menuSettingsCardHtml() + libraryCardHtml(false) + reportCardHtml() + list;
   }
   function bind(){
+    var saveMenuSettings=document.getElementById("saveMenuSettings");
+    if(saveMenuSettings) saveMenuSettings.onclick=function(){
+      var m=currentMenu(); if(!m) return;
+      var oldSections=sectionsOf(m).slice();
+      m.type=document.getElementById("menuType").value;
+      m.period=document.getElementById("menuPeriod").value.trim();
+      m.validFrom=document.getElementById("menuValidFrom").value;
+      m.validTo=document.getElementById("menuValidTo").value;
+      var cm=document.getElementById("menuCycle").value;
+      var labels=document.getElementById("menuSections").value.split(",").map(function(x){return x.trim();}).filter(Boolean);
+      var newSections=labels.length?labels.map(function(label,i){return {id:sectionId(label,i),label:label};}):oldSections;
+      m.sections=newSections;
+      (m.weeks||[]).forEach(function(w){DAYS.forEach(function(d){w.days[d.id]=ensureMealShape(w.days[d.id],newSections);});});
+      if(cm==="single" && m.weeks.length>1) m.weeks=m.weeks.slice(0,1);
+      while(cm==="weekly" && m.weeks.length<4) m.weeks.push({name:WEEK_NAMES[m.weeks.length]||("Settimana "+(m.weeks.length+1)),days:emptyDays(newSections)});
+      m.cycle={mode:cm,weeks:m.weeks.length};
+      saveLibrary(); renderAll(); toast("Impostazioni salvate");
+    };
+    var sendReport=document.getElementById("sendReport");
+    if(sendReport) sendReport.onclick=async function(){
+      var m=currentMenu(), contextEl=document.getElementById("reportContext"), messageEl=document.getElementById("reportMessage"), websiteEl=document.getElementById("reportWebsite");
+      var message=(messageEl&&messageEl.value||"").trim(); if(!m||message.length<3){toast("Scrivi una segnalazione");return;}
+      var old=sendReport.textContent; sendReport.disabled=true; sendReport.textContent="Invio...";
+      try{await submitReport(m.id,(contextEl&&contextEl.value||"").trim(),message,websiteEl&&websiteEl.value||""); if(messageEl)messageEl.value=""; if(contextEl)contextEl.value=""; toast("Segnalazione inviata");}
+      catch(e){toast(e.message||"Invio non riuscito");} finally{sendReport.disabled=false;sendReport.textContent=old;}
+    };
+
     document.querySelectorAll(".course").forEach(function(el){
       el.onclick = function(e){
         if (e.target.closest(".edit-btn")) return;
@@ -359,7 +535,7 @@
     state.edit = {w:w,d:d};
     var day = DAYS.find(function(x){ return x.id===d; });
     document.getElementById("editMeta").textContent = (day?day.label:d) + " · " + m.weeks[w].name;
-    var courses = [["primo","Primo"],["secondo","Secondo"],["contorno","Contorno"],["frutta","Frutta"],["merenda","Merenda"]];
+    var courses = sectionsOf(m).map(function(sec){ return [sec.id,sec.label]; });
     document.getElementById("editBody").innerHTML = courses.map(function(c){
       return '<div class="edit-course"><label>'+c[1]+'</label><input id="f-'+c[0]+'" value="'+esc(mealObj[c[0]]||"")+'" placeholder="Piatto">' +
         '<div class="label">Allergeni</div>'+allergenChipsHtml(c[0]+"A", mealObj[c[0]+"A"]||"")+"</div>";
@@ -371,7 +547,7 @@
   document.getElementById("saveEdit").onclick = function(){
     if(!state.edit||!currentMenu()) return;
     var mealObj = currentMenu().weeks[state.edit.w].days[state.edit.d];
-    ["primo","secondo","contorno","frutta","merenda"].forEach(function(k){
+    sectionsOf(currentMenu()).map(function(sec){return sec.id;}).forEach(function(k){
       var el = document.getElementById("f-"+k);
       mealObj[k] = el ? el.value.trim() : "";
     });
@@ -397,7 +573,7 @@
   function openCellBar(key){
     cellBarKey = key;
     var p = String(key||"").split(":");
-    var labels = { primo:"Primo", secondo:"Secondo", contorno:"Contorno", frutta:"Frutta", merenda:"Merenda" };
+    var labels = {}; sectionsOf(currentMenu()).forEach(function(sec){ labels[sec.id]=sec.label; });
     var day = DAYS.find(function(d){ return d.id===p[1]; });
     var val = "";
     var menu = currentMenu();
@@ -492,7 +668,7 @@
     box.innerHTML =
       '<div id="importa-compact">' +
       '<div class="drop" style="margin-bottom:10px"><h3>Crea menu vuoto</h3><p>Parti dalla tabella e compila a mano. In alto cambi menu o torni qui.</p>' +
-      '<div class="field" style="text-align:left"><label>Nome</label><input id="imp-name" placeholder="es. Menu settembre"></div>' +
+      '<div class="field" style="text-align:left"><label>Nome</label><input id="imp-name" placeholder="es. Menu settembre"></div><div class="field" style="text-align:left"><label>Tipo</label><select id="imp-type"><option value="school">Scuola</option><option value="work">Lavoro</option><option value="event">Evento / festa</option><option value="other">Altro</option></select></div>' +
       '<button class="btn btn-primary btn-wide" id="btnBlank">Crea e apri la tabella</button></div>' +
       '<div class="meal-card"><h2>Da un AI</h2><p class="status">Copia il prompt e allegalo a foto o PDF in una chat. Poi incolla qui il JSON, oppure carica il file.</p>' +
       '<div class="prompt-row"><span class="prompt-ph">Prompt 4 settimane</span><button type=button class="btn btn-ghost" id="copyPrompt">Copia</button></div>' +
@@ -500,8 +676,27 @@
       '<div class="field"><label>JSON</label><textarea id="jsonPaste" placeholder="{ ... }"></textarea></div>' +
       '<div class="actions"><button class="btn btn-primary" id="applyJsonPaste">Importa JSON</button><button class="btn btn-ghost" id="btnJsonFile">File .json</button></div>' +
       '<input id="fileJson" type="file" accept=".json,application/json" hidden></div>' +
-      libraryCardHtml(true) +
+      exportCardHtml() + libraryCardHtml(true) +
       '</div>';
+  }
+
+  function exportSelectedMenus(){
+    if(!state.menus.length){toast("Nessun menu da esportare");return;}
+    var chosen=Array.prototype.filter.call(document.querySelectorAll("[data-export-menu]"),function(x){return x.checked;}).map(function(x){return x.value;});
+    if(!chosen.length){toast("Seleziona almeno un menu");return;}
+    var menus=state.menus.filter(function(m){return chosen.indexOf(m.id)>=0;});
+    var payload=menus.length===1 ? menus[0] : {kind:"menu-library",version:2,menus:menus,activeId:menus[0].id};
+    var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download=menus.length===1 ? (sectionId(menus[0].name,0)||"menu")+".json" : "menu-selezionati.json";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+    toast(menus.length===1?"Menu esportato":menus.length+" menu esportati");
+  }
+  function exportCardHtml(){
+    if(!state.menus.length) return "";
+    return '<div class="meal-card"><h2>Esporta menu</h2><p class=status>Scegli uno o più menu. Un menu mantiene il formato singolo; più menu creano un backup V2.</p>'+
+      state.menus.map(function(m){return '<label class=pick-row><span>'+esc(m.name)+'</span><input type=checkbox data-export-menu value="'+esc(m.id)+'" '+(m.id===state.activeId?"checked":"")+'></label>';}).join("")+
+      '<button type=button class="btn btn-primary btn-wide" id=exportSelected>Esporta selezionati</button></div>';
   }
 
   function libraryCardHtml(withInput){
@@ -705,23 +900,15 @@
   }
 
   function weekGridHtml(weekObj, weekIdx, editable){
-    var courses = [["primo","Primo"],["secondo","Secondo"],["contorno","Contorno"],["frutta","Frutta"],["merenda","Merenda"]];
-    if (weekFilled(weekObj)) {
-      courses = courses.filter(function(c){
-        return DAYS.some(function(d){
-          var m = weekObj.days && weekObj.days[d.id];
-          return m && String(m[c[0]]||"").trim();
-        });
-      });
-    }
-    var head = "<tr><th></th>"+courses.map(function(c){ return "<th>"+c[1]+"</th>"; }).join("")+"</tr>";
-    var body = DAYS.map(function(d){
-      var m = (weekObj && weekObj.days && weekObj.days[d.id]) || meal();
+    var courses=sectionsOf(currentMenu()).map(function(sec){return [sec.id,sec.label];});
+    if(weekFilled(weekObj)) courses=courses.filter(function(c){return DAYS.some(function(d){var x=weekObj.days&&weekObj.days[d.id];return x&&String(x[c[0]]||"").trim();});});
+    var head="<tr><th></th>"+courses.map(function(c){return "<th>"+esc(c[1])+"</th>";}).join("")+"</tr>";
+    var body=DAYS.map(function(d){
+      var x=(weekObj&&weekObj.days&&weekObj.days[d.id])||meal(sectionsOf(currentMenu()));
       return "<tr><th class=day>"+d.short+"</th>"+courses.map(function(c){
-        var val = m[c[0]] || "";
-        var empty = val ? "" : " cell-empty";
-        if (editable) return "<td class='"+empty+"'><button type=button class=cell-btn data-cell="+weekIdx+":"+d.id+":"+c[0]+">"+esc(val || "…")+"</button></td>";
-        return "<td>"+esc(val || "")+"</td>";
+        var val=x[c[0]]||"", empty=val?"":" cell-empty";
+        if(editable) return "<td class='"+empty+"'><button type=button class=cell-btn data-cell="+weekIdx+":"+d.id+":"+c[0]+">"+esc(val||"…")+"</button></td>";
+        return "<td>"+esc(val||"")+"</td>";
       }).join("")+"</tr>";
     }).join("");
     return "<div class=week-grid><table>"+head+body+"</table></div>";
@@ -1150,15 +1337,26 @@
     if(!obj || typeof obj!=="object") throw new Error("il file non contiene un oggetto JSON");
     var name=(obj.name||"Nuovo menu").toString().trim() || "Nuovo menu";
     var period=(obj.period||"").toString().trim();
+    var sections=Array.isArray(obj.sections)&&obj.sections.length ? obj.sections.map(function(x,i){
+      var label=String((x&&x.label)||("Sezione "+(i+1))).trim();
+      return {id:String((x&&x.id)||sectionId(label,i)),label:label};
+    }) : DEFAULT_SECTIONS.slice();
     var srcWeeks=Array.isArray(obj.weeks)?obj.weeks:[];
-    var weeks=WEEK_NAMES.map(function(wn,i){
-      var src=srcWeeks[i]||{};
-      var srcDays=(src&&src.days)||{};
-      var days={};
-      DAYS.forEach(function(d){ days[d.id]=normalizeMealShape(srcDays[d.id]); });
-      return { name:(src.name||wn), days:days };
-    });
-    return { name:name, period:period, weeks:weeks };
+    var wanted=(obj.cycle&&obj.cycle.mode==="single")?1:Math.max(1,srcWeeks.length||4);
+    var weeks=[];
+    for(var i=0;i<wanted;i++){
+      var src=srcWeeks[i]||{}, srcDays=(src&&src.days)||{}, days={};
+      DAYS.forEach(function(d){
+        var raw=srcDays[d.id]||{}, out=meal(sections);
+        sections.forEach(function(sec){ out[sec.id]=String(raw[sec.id]||""); out[sec.id+"A"]=String(raw[sec.id+"A"]||""); });
+        days[d.id]=out;
+      });
+      weeks.push({name:String(src.name||WEEK_NAMES[i]||("Settimana "+(i+1))),days:days});
+    }
+    return {schemaVersion:2,id:obj.id||"",name:name,type:String(obj.type||"school"),period:period,
+      validFrom:String(obj.validFrom||""),validTo:String(obj.validTo||""),
+      cycle:(obj.cycle&&typeof obj.cycle==="object")?obj.cycle:{mode:"weekly",weeks:weeks.length},
+      sections:sections,weeks:weeks};
   }
   function saveImportedMenu(norm){
     var nameInput=document.getElementById("imp-name");
@@ -1171,7 +1369,7 @@
     offerLibraryCopy();
   }
   function libraryPayload(){
-    return { kind:"menu-library", version:1, menus: state.menus, activeId: state.activeId };
+    return { kind:"menu-library", version:2, menus: state.menus, activeId: state.activeId };
   }
   function libraryFile(){
     var blob = new Blob([JSON.stringify(libraryPayload(), null, 2)], { type:"application/json" });
@@ -1201,12 +1399,15 @@
     download();
   }
   function isLibraryFile(obj){
-    return !!(obj && Array.isArray(obj.menus) && (obj.kind === "menu-library" || obj.version === 1));
+    return !!(obj && Array.isArray(obj.menus) && (obj.kind === "menu-library" || obj.version === 1 || obj.version === 2));
   }
   function applyLibraryObject(obj){
     var menus = obj.menus.map(function(m, i){
       var norm = validateAndNormalizeMenuJson(m);
-      return makeMenu({ id: m.id || ("menu-" + Date.now() + "-" + i), name: norm.name, period: norm.period, weeks: norm.weeks });
+      return makeMenu({
+        id:m.id || ("menu-" + Date.now() + "-" + i), name:norm.name, type:norm.type, period:norm.period,
+        validFrom:norm.validFrom, validTo:norm.validTo, cycle:norm.cycle, sections:norm.sections, weeks:norm.weeks
+      });
     });
     state.menus = menus;
     var wanted = obj.activeId;
@@ -1275,4 +1476,5 @@
   if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(function(){});
   applyTint(currentTintId());
   renderAll();
+  syncOfficialMenus();
 })();
