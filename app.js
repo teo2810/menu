@@ -69,7 +69,29 @@
   function getGeminiKey(){
     try { return (localStorage.getItem(GEMINI_STORE) || "").trim(); } catch (e) { return ""; }
   }
-  function meal(){ return {primo:"",primoA:"",secondo:"",secondoA:"",contorno:"",contornoA:"",frutta:"",fruttaA:"",merenda:"",merendaA:""}; }
+  var DEFAULT_SECTIONS=[{id:"primo",label:"Primo"},{id:"secondo",label:"Secondo"},{id:"contorno",label:"Contorno"},{id:"frutta",label:"Frutta"},{id:"merenda",label:"Merenda"}];
+  function sectionsOf(menu){ return menu && Array.isArray(menu.sections) && menu.sections.length ? menu.sections : DEFAULT_SECTIONS; }
+  function sectionId(label,i){
+    var known={primo:"primo",secondo:"secondo",contorno:"contorno",frutta:"frutta",merenda:"merenda"};
+    var low=String(label||"").trim().toLowerCase();
+    if(known[low]) return known[low];
+    var slug=low.normalize ? low.normalize("NFD").replace(/[\u0300-\u036f]/g,"") : low;
+    slug=slug.replace(/[^a-z0-9]+/g,"").slice(0,24);
+    return slug || ("section"+(i+1));
+  }
+  function meal(sections){
+    var o={};
+    (sections||DEFAULT_SECTIONS).forEach(function(sec){ o[sec.id]=""; o[sec.id+"A"]=""; });
+    return o;
+  }
+  function ensureMealShape(day,sections){
+    day=day||{};
+    sectionsOf({sections:sections}).forEach(function(sec){
+      if(day[sec.id]==null) day[sec.id]="";
+      if(day[sec.id+"A"]==null) day[sec.id+"A"]="";
+    });
+    return day;
+  }
   function aKeyOf(course){ return course + "A"; }
   function emptyDays(){ var o={}; DAYS.forEach(function(d){ o[d.id]=meal(); }); return o; }
   function makeMenu(p){
@@ -83,9 +105,7 @@
       validFrom: p.validFrom || "",
       validTo: p.validTo || "",
       cycle: p.cycle || { mode:"weekly", weeks:4 },
-      sections: Array.isArray(p.sections) && p.sections.length ? p.sections : [
-        {id:"primo",label:"Primo"},{id:"secondo",label:"Secondo"},{id:"contorno",label:"Contorno"},{id:"frutta",label:"Frutta"},{id:"merenda",label:"Merenda"}
-      ],
+      sections: Array.isArray(p.sections) && p.sections.length ? p.sections : DEFAULT_SECTIONS.slice(),
       weeks: p.weeks || [
       { name:"Prima settimana", days:emptyDays() },
       { name:"Seconda settimana", days:emptyDays() },
@@ -220,9 +240,7 @@
       m.cycle={mode:cm,weeks:cm==="single"?1:Math.max(1,(m.weeks||[]).length)};
       var labels=document.getElementById("menuSections").value.split(",").map(function(x){return x.trim();}).filter(Boolean);
       if(labels.length) m.sections=labels.map(function(label,i){
-        var known={primo:"primo",secondo:"secondo",contorno:"contorno",frutta:"frutta",merenda:"merenda"};
-        var low=label.toLowerCase(), id=known[low] || ("section"+(i+1));
-        return {id:id,label:label};
+        return {id:sectionId(label,i),label:label};
       });
       saveLibrary(); renderAll(); toast("Impostazioni salvate");
     };
@@ -270,17 +288,14 @@
     return out;
   }
   function mealHtml(d, weekIdx, dayId){
-    var rows = [
-      ["primo","Primo",d.primo,d.primoA],
-      ["secondo","Secondo",d.secondo,d.secondoA],
-      ["contorno","Contorno",d.contorno,d.contornoA||""],
-      ["frutta","Frutta",d.frutta,d.fruttaA||""],
-      ["merenda","Merenda",d.merenda,d.merendaA]
-    ].filter(function(x){ return x[2]; });
-    var body = rows.length ? rows.map(function(x){
-      return "<div class=course data-course="+x[0]+"><div class='ico svg-"+x[0]+"'>"+ICONS[x[0]]+"</div><div class=course-body><div class=label>"+x[1]+"</div><div class=dish>"+esc(x[2])+"</div><div class=hint>Tocca per gli allergeni</div></div>"+allergenBox(x[3])+"</div>";
+    var m=currentMenu();
+    var rows=sectionsOf(m).map(function(sec){ return [sec.id,sec.label,d&&d[sec.id],d&&d[sec.id+"A"]]; }).filter(function(x){return x[2];});
+    var body=rows.length ? rows.map(function(x){
+      var icon=ICONS[x[0]] || '<span aria-hidden=true style="font-size:24px">•</span>';
+      return "<div class=course data-course="+x[0]+"><div class='ico svg-"+x[0]+"'>"+icon+"</div><div class=course-body><div class=label>"+esc(x[1])+"</div><div class=dish>"+esc(x[2])+"</div><div class=hint>Tocca per gli allergeni</div></div>"+allergenBox(x[3])+"</div>";
     }).join("") : "<p class=status>Giorno vuoto. Tocca Correggi.</p>";
-    return "<article class=meal-card><h2>"+DAYS.find(function(x){return x.id===dayId;}).label+" <button class=edit-btn data-edit="+weekIdx+":"+dayId+">Correggi</button></h2>"+body+"</article>";
+    var day=DAYS.find(function(x){return x.id===dayId;});
+    return "<article class=meal-card><h2>"+esc(day?day.label:dayId)+" <button class=edit-btn data-edit="+weekIdx+":"+dayId+">Correggi</button></h2>"+body+"</article>";
   }
   function renderOggi(){
     var box = document.getElementById("screen-oggi");
@@ -307,7 +322,7 @@
     var chips = DAYS.map(function(d){ return "<button class='day-chip"+(d.id===state.day?" on":"")+"' data-day="+d.id+"><small>"+d.short+"</small><b>"+d.label.slice(0,3)+"</b></button>"; }).join("");
     var emptyWeek = !DAYS.some(function(d){
       var mealObj = m.weeks[state.week].days[d.id];
-      return mealObj && (mealObj.primo || mealObj.secondo || mealObj.contorno || mealObj.frutta || mealObj.merenda);
+      return mealObj && sectionsOf(m).some(function(sec){ return String(mealObj[sec.id]||"").trim(); });
     });
     var hint = emptyWeek
       ? '<div class="note">Menu vuoto: tocca una cella per scrivere, oppure torna a Importa per un JSON. Per cambiare menu usa il nome in alto.</div><button class="btn btn-ghost btn-wide" id="backImport">Torna a Importa</button>'
@@ -490,7 +505,7 @@
     state.edit = {w:w,d:d};
     var day = DAYS.find(function(x){ return x.id===d; });
     document.getElementById("editMeta").textContent = (day?day.label:d) + " · " + m.weeks[w].name;
-    var courses = [["primo","Primo"],["secondo","Secondo"],["contorno","Contorno"],["frutta","Frutta"],["merenda","Merenda"]];
+    var courses = sectionsOf(m).map(function(sec){ return [sec.id,sec.label]; });
     document.getElementById("editBody").innerHTML = courses.map(function(c){
       return '<div class="edit-course"><label>'+c[1]+'</label><input id="f-'+c[0]+'" value="'+esc(mealObj[c[0]]||"")+'" placeholder="Piatto">' +
         '<div class="label">Allergeni</div>'+allergenChipsHtml(c[0]+"A", mealObj[c[0]+"A"]||"")+"</div>";
@@ -502,7 +517,7 @@
   document.getElementById("saveEdit").onclick = function(){
     if(!state.edit||!currentMenu()) return;
     var mealObj = currentMenu().weeks[state.edit.w].days[state.edit.d];
-    ["primo","secondo","contorno","frutta","merenda"].forEach(function(k){
+    sectionsOf(currentMenu()).map(function(sec){return sec.id;}).forEach(function(k){
       var el = document.getElementById("f-"+k);
       mealObj[k] = el ? el.value.trim() : "";
     });
@@ -528,7 +543,7 @@
   function openCellBar(key){
     cellBarKey = key;
     var p = String(key||"").split(":");
-    var labels = { primo:"Primo", secondo:"Secondo", contorno:"Contorno", frutta:"Frutta", merenda:"Merenda" };
+    var labels = {}; sectionsOf(currentMenu()).forEach(function(sec){ labels[sec.id]=sec.label; });
     var day = DAYS.find(function(d){ return d.id===p[1]; });
     var val = "";
     var menu = currentMenu();
@@ -836,23 +851,15 @@
   }
 
   function weekGridHtml(weekObj, weekIdx, editable){
-    var courses = [["primo","Primo"],["secondo","Secondo"],["contorno","Contorno"],["frutta","Frutta"],["merenda","Merenda"]];
-    if (weekFilled(weekObj)) {
-      courses = courses.filter(function(c){
-        return DAYS.some(function(d){
-          var m = weekObj.days && weekObj.days[d.id];
-          return m && String(m[c[0]]||"").trim();
-        });
-      });
-    }
-    var head = "<tr><th></th>"+courses.map(function(c){ return "<th>"+c[1]+"</th>"; }).join("")+"</tr>";
-    var body = DAYS.map(function(d){
-      var m = (weekObj && weekObj.days && weekObj.days[d.id]) || meal();
+    var courses=sectionsOf(currentMenu()).map(function(sec){return [sec.id,sec.label];});
+    if(weekFilled(weekObj)) courses=courses.filter(function(c){return DAYS.some(function(d){var x=weekObj.days&&weekObj.days[d.id];return x&&String(x[c[0]]||"").trim();});});
+    var head="<tr><th></th>"+courses.map(function(c){return "<th>"+esc(c[1])+"</th>";}).join("")+"</tr>";
+    var body=DAYS.map(function(d){
+      var x=(weekObj&&weekObj.days&&weekObj.days[d.id])||meal(sectionsOf(currentMenu()));
       return "<tr><th class=day>"+d.short+"</th>"+courses.map(function(c){
-        var val = m[c[0]] || "";
-        var empty = val ? "" : " cell-empty";
-        if (editable) return "<td class='"+empty+"'><button type=button class=cell-btn data-cell="+weekIdx+":"+d.id+":"+c[0]+">"+esc(val || "…")+"</button></td>";
-        return "<td>"+esc(val || "")+"</td>";
+        var val=x[c[0]]||"", empty=val?"":" cell-empty";
+        if(editable) return "<td class='"+empty+"'><button type=button class=cell-btn data-cell="+weekIdx+":"+d.id+":"+c[0]+">"+esc(val||"…")+"</button></td>";
+        return "<td>"+esc(val||"")+"</td>";
       }).join("")+"</tr>";
     }).join("");
     return "<div class=week-grid><table>"+head+body+"</table></div>";
