@@ -471,14 +471,42 @@
     return "<div class='meal-card tint-card'><div class=tint-head><b>Tinta</b><span class=status id=tintName>"+name+"</span></div><div class=tint-rail>"+dots+"</div></div>";
   }
 
-  function menuSettingsCardHtml(){
+  function formatDateIT(v){
+    var d=parseDateOnly(v); if(!d) return "";
+    return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();
+  }
+  function typeLabel(v){ return ({school:"Scuola",work:"Lavoro",event:"Evento / festa",other:"Altro"})[v]||"Altro"; }
+  function periodFromDates(a,b){
+    if(a&&b) return formatDateIT(a)+" – "+formatDateIT(b);
+    if(a) return "Dal "+formatDateIT(a);
+    if(b) return "Fino al "+formatDateIT(b);
+    return "";
+  }
+  function activeMenuBannerHtml(){
     var m=currentMenu(); if(!m) return "";
+    var dates=periodFromDates(m.validFrom,m.validTo), period=dates||(m.period||"Nessun periodo impostato");
+    var sync=getCloudKey()?(navigator.onLine?"Cloud attivo":"Offline"):"Solo dispositivo";
+    return "<section class='active-menu-banner'><div class=active-menu-kicker>MENU ATTIVO <span>"+esc(sync)+"</span></div><h2>"+esc(m.name)+"</h2><div class=active-menu-meta><b>"+esc(typeLabel(m.type))+"</b><span>"+esc(period)+"</span></div></section>";
+  }
+  function choiceHtml(name,value,items){
+    return "<div class=choice-row data-choice="+name+">"+items.map(function(x){return "<button type=button class='choice-chip"+(x[0]===value?" on":"")+"' data-value='"+x[0]+"'>"+esc(x[1])+"</button>";}).join("")+"<input type=hidden id="+name+" value='"+esc(value)+"'></div>";
+  }
+  function inferDatesFromPeriod(m){
+    if(!m || (m.validFrom&&m.validTo) || !m.period) return;
+    var hits=String(m.period).match(/\b(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})\b/g)||[];
+    function iso(x){var p=x.split(/[\/.-]/);return p[2]+"-"+p[1].padStart(2,"0")+"-"+p[0].padStart(2,"0");}
+    if(hits[0]&&!m.validFrom)m.validFrom=iso(hits[0]); if(hits[1]&&!m.validTo)m.validTo=iso(hits[1]);
+  }
+  function menuSettingsCardHtml(){
+    var m=currentMenu(); if(!m) return ""; inferDatesFromPeriod(m);
     var type=m.type||"school", cycle=(m.cycle&&m.cycle.mode)||"weekly";
-    return "<details class='settings-panel'><summary><span><b>Impostazioni menu</b><small>Tipo, periodo, ciclo e sezioni</small></span><i></i></summary><div class=panel-body>"+
-      "<div class=compact-grid><div class=field><label>Tipo</label><select id=menuType><option value=school"+(type==="school"?" selected":"")+">Scuola</option><option value=work"+(type==="work"?" selected":"")+">Lavoro</option><option value=event"+(type==="event"?" selected":"")+">Evento / festa</option><option value=other"+(type==="other"?" selected":"")+">Altro</option></select></div>"+
-      "<div class=field><label>Ciclo</label><select id=menuCycle><option value=weekly"+(cycle==="weekly"?" selected":"")+">Settimanale</option><option value=single"+(cycle==="single"?" selected":"")+">Singolo</option></select></div></div>"+
-      "<div class=field><label>Periodo</label><input id=menuPeriod value='"+esc(m.period||"")+"' placeholder='Es. Menu invernale'></div>"+
+    var dates=periodFromDates(m.validFrom,m.validTo);
+    return "<details class='settings-panel'><summary><span><b>Impostazioni menu</b><small>"+esc(typeLabel(type))+" · "+(cycle==="weekly"?esc((m.weeks||[]).length+" settimane"):"menu singolo")+"</small></span><i></i></summary><div class=panel-body>"+
+      "<div class=field><label>Tipo</label>"+choiceHtml("menuType",type,[["school","Scuola"],["work","Lavoro"],["event","Evento"],["other","Altro"]])+"</div>"+
+      "<div class=field><label>Ciclo</label>"+choiceHtml("menuCycle",cycle,[["weekly","Settimanale"],["single","Singolo"]])+"</div>"+
       "<div class=compact-grid><div class=field><label>Dal</label><input id=menuValidFrom type=date value='"+esc(m.validFrom||"")+"'></div><div class=field><label>Al</label><input id=menuValidTo type=date value='"+esc(m.validTo||"")+"'></div></div>"+
+      "<div class=auto-period id=autoPeriod><span>Periodo</span><b>"+esc(dates||(m.period||"Automatico dalle date"))+"</b></div>"+
+      "<div class=field><label>Etichetta periodo <small>opzionale</small></label><input id=menuPeriod value='"+esc(dates?"":(m.period||""))+"' placeholder='Es. Menu invernale'></div>"+
       "<div class=field><label>Sezioni</label><input id=menuSections value='"+esc((m.sections||[]).map(function(x){return x.label;}).join(", "))+"' placeholder='Primo, Secondo, Contorno'></div>"+
       "<button type=button class='btn btn-primary btn-wide' id=saveMenuSettings>Salva impostazioni</button></div></details>";
   }
@@ -497,7 +525,7 @@
       return "<div class='menu-manage-row"+active+"'><input class=menu-rename data-rename="+item.id+" value=\""+esc(item.name)+"\" aria-label=Nome><span><button type=button class=ico-btn data-use="+item.id+" aria-label=Apri><svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M9 6h11v12H9'/><path d='M13 12H4'/><path d='M8 8l-4 4 4 4'/></svg></button><button type=button class='ico-btn danger' data-del="+item.id+" aria-label=Elimina><svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M4 7h16'/><path d='M9 7V5h6v2'/><path d='M7 7l1 13h8l1-13'/></svg></button></span></div>";
     }).join("") : "<p class=status>Ancora nessun menu.</p>";
     var dataPanel="<details class='settings-panel'><summary><span><b>Dati e backup</b><small>Esporta o ripristina i menu</small></span><i></i></summary><div class=panel-body><div class=compact-actions><button type=button class='btn btn-primary' data-save-copy>Salva copia</button><button type=button class='btn btn-ghost' data-load-copy>Carica copia</button></div>"+exportCardHtml().replace('class=\"meal-card export-card\"','class=\"embedded-export export-card\"')+"<input id='fileLibrary' type='file' accept='.json,application/json' hidden></div></details>";
-    box.innerHTML="<div class='info-title'><h2>Menu</h2><p>Gestione e preferenze</p></div>"+
+    box.innerHTML="<div class='info-title'><h2>Menu</h2><p>Gestione e preferenze</p></div>"+activeMenuBannerHtml()+
       "<section class='settings-card'><div class='settings-head'><b>I tuoi menu</b><span>"+state.menus.length+"</span></div><div class=menu-manage-list>"+list+"</div></section>"+
       "<section class='settings-card settings-stack'>"+cloudCardHtml()+menuSettingsCardHtml()+dataPanel+reportCardHtml()+"</section>"+
       "<section class='settings-card tint-compact'>"+tintCardHtml().replace("class='meal-card tint-card'","class='tint-card'")+"</section>";
@@ -508,9 +536,10 @@
       var m=currentMenu(); if(!m) return;
       var oldSections=sectionsOf(m).slice();
       m.type=document.getElementById("menuType").value;
-      m.period=document.getElementById("menuPeriod").value.trim();
       m.validFrom=document.getElementById("menuValidFrom").value;
       m.validTo=document.getElementById("menuValidTo").value;
+      var manualPeriod=document.getElementById("menuPeriod").value.trim();
+      m.period=periodFromDates(m.validFrom,m.validTo)||manualPeriod;
       var cm=document.getElementById("menuCycle").value;
       var labels=document.getElementById("menuSections").value.split(",").map(function(x){return x.trim();}).filter(Boolean);
       var newSections=labels.length?labels.map(function(label,i){return {id:sectionId(label,i),label:label};}):oldSections;
@@ -521,6 +550,16 @@
       m.cycle={mode:cm,weeks:m.weeks.length};
       saveLibrary(); renderAll(); toast("Impostazioni salvate");
     };
+    document.querySelectorAll("[data-choice]").forEach(function(row){
+      row.querySelectorAll(".choice-chip").forEach(function(btn){ btn.onclick=function(){
+        row.querySelectorAll(".choice-chip").forEach(function(x){x.classList.remove("on");}); btn.classList.add("on");
+        var hidden=row.querySelector("input[type=hidden]"); if(hidden) hidden.value=btn.getAttribute("data-value");
+      };});
+    });
+    ["menuValidFrom","menuValidTo"].forEach(function(id){var el=document.getElementById(id);if(el)el.onchange=function(){
+      var a=document.getElementById("menuValidFrom").value,b=document.getElementById("menuValidTo").value,p=periodFromDates(a,b),box=document.getElementById("autoPeriod");
+      if(box){var strong=box.querySelector("b");if(strong)strong.textContent=p||"Automatico dalle date";}
+    };});
     var sendReport=document.getElementById("sendReport");
     if(sendReport) sendReport.onclick=async function(){
       var m=currentMenu(), contextEl=document.getElementById("reportContext"), messageEl=document.getElementById("reportMessage"), websiteEl=document.getElementById("reportWebsite");
@@ -1553,12 +1592,26 @@
     var st=document.createElement("style");
     st.textContent=`
 #screen-info{padding-top:2px}.info-title{margin:0 2px 12px}.info-title h2{font-family:Fraunces,serif;font-size:1.45rem;margin:0}.info-title p{margin:2px 0 0;color:var(--muted);font-size:.78rem;font-weight:800}
-.settings-card{background:#fff;border-radius:22px;box-shadow:var(--shadow);padding:12px;margin-bottom:10px}.settings-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.settings-head b{font-family:Fraunces,serif;font-size:1rem}.settings-head span{font-size:.72rem;font-weight:800;color:var(--brand);background:var(--brand-soft);padding:3px 8px;border-radius:999px}
+.settings-card{background:#fff;border-radius:22px;box-shadow:0 8px 24px rgba(20,24,32,.10);padding:12px;margin-bottom:10px}.settings-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.settings-head b{font-family:Fraunces,serif;font-size:1rem}.settings-head span{font-size:.72rem;font-weight:800;color:var(--brand);background:var(--brand-soft);padding:3px 8px;border-radius:999px}
 .menu-manage-list{display:grid;gap:6px}.menu-manage-row{display:flex;align-items:center;gap:6px;padding:4px;border-radius:15px;background:#faf8fc;border:1px solid var(--line)}.menu-manage-row.active{background:var(--brand-soft);border-color:transparent}.menu-manage-row .menu-rename{padding:7px 8px;font-size:.86rem}.menu-manage-row span{display:flex;gap:4px}.menu-manage-row .ico-btn{width:32px;height:32px;border-radius:10px}
 .settings-stack{padding:0;overflow:hidden}.settings-panel{border-bottom:1px solid var(--line);background:#fff}.settings-panel:last-child{border-bottom:0}.settings-panel summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;cursor:pointer}.settings-panel summary::-webkit-details-marker{display:none}.settings-panel summary span{display:grid;gap:1px}.settings-panel summary b{font-size:.88rem}.settings-panel summary small{font-size:.68rem;color:var(--muted);font-weight:800}.settings-panel summary i{width:9px;height:9px;border-right:2px solid var(--brand);border-bottom:2px solid var(--brand);transform:rotate(45deg);transition:.2s}.settings-panel[open] summary i{transform:rotate(225deg);margin-top:6px}.panel-body{padding:0 12px 12px}.panel-body .field{margin:7px 0}.panel-body input,.panel-body select{padding:9px 11px;border-radius:13px;font-size:.82rem}.compact-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.compact-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.compact-actions .btn,.panel-body .btn{padding:10px 9px;border-radius:16px;font-size:.8rem}.compact-textarea{min-height:82px!important}
 .panel-body .export-card{margin:8px 0 0;padding:8px 0 0}.panel-body .export-row{min-height:36px;padding:5px 8px;font-size:.76rem}.panel-body .export-row i{width:20px;height:20px;flex-basis:20px}.panel-body .export-card h2{font-family:Nunito,system-ui,sans-serif;font-size:.82rem}.panel-body .export-card .status{display:none}
 .tint-compact{padding:11px 12px}.tint-compact .tint-card{margin:0}.tint-compact .tint-head{margin-bottom:8px}.tint-compact .tint-head b{font-family:Nunito,system-ui,sans-serif;font-size:.88rem}.tint-compact .tint-dot{height:28px}.tint-compact .tint-rail{padding:6px 8px}
-@media(max-width:360px){.compact-grid{grid-template-columns:1fr}.settings-panel summary{padding:11px 12px}}
+
+.active-menu-banner{position:relative;overflow:hidden;background:var(--grad);border-radius:24px;padding:15px 16px;margin:0 0 10px;box-shadow:0 10px 26px rgba(20,24,32,.11)}
+.active-menu-banner:after{content:"";position:absolute;width:120px;height:120px;border-radius:50%;right:-48px;top:-54px;background:rgba(255,255,255,.28)}
+.active-menu-kicker{position:relative;z-index:1;display:flex;justify-content:space-between;gap:8px;font-size:.62rem;font-weight:900;letter-spacing:.08em;color:var(--muted)}.active-menu-kicker span{letter-spacing:0;text-transform:none;color:var(--brand)}
+.active-menu-banner h2{position:relative;z-index:1;font-family:Fraunces,serif;font-size:1.28rem;margin:4px 0 6px}.active-menu-meta{position:relative;z-index:1;display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-size:.72rem;font-weight:800}.active-menu-meta b{background:rgba(255,255,255,.62);padding:4px 8px;border-radius:999px}.active-menu-meta span{color:var(--muted)}
+.settings-stack{background:transparent!important;box-shadow:none!important;display:grid;gap:8px}.settings-panel{border:1px solid var(--line)!important;border-radius:18px!important;overflow:hidden;box-shadow:0 5px 16px rgba(20,24,32,.07);background:#fff}.settings-panel:last-child{border-bottom:1px solid var(--line)!important}.settings-panel[open]{box-shadow:0 9px 24px rgba(20,24,32,.10)}.settings-panel[open] summary{background:var(--brand-soft)}
+.choice-row{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px}.choice-chip{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:13px;padding:9px 6px;font-family:inherit;font-size:.72rem;font-weight:900}.choice-chip.on{background:var(--grad);color:var(--ink);border-color:transparent;box-shadow:0 4px 10px rgba(20,24,32,.08)}
+.auto-period{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--brand-soft);border-radius:13px;padding:9px 11px;margin:4px 0 7px;font-size:.72rem}.auto-period span{color:var(--muted);font-weight:800}.auto-period b{text-align:right;font-size:.74rem}.field label small{text-transform:none;letter-spacing:0;font-weight:700}
+
+
+:root,html[data-tint]{--shadow:0 8px 22px rgba(20,24,32,.10)}
+.week-tab,.day-chip{box-shadow:0 7px 18px rgba(20,24,32,.11),0 2px 4px rgba(20,24,32,.05)}.week-tab.on,.day-chip.on{box-shadow:0 8px 18px rgba(20,24,32,.13)}
+nav.tabbar ul{box-shadow:0 16px 36px rgba(20,24,32,.16)}nav.tabbar .blob{box-shadow:0 10px 22px rgba(20,24,32,.18),0 4px 10px rgba(20,24,32,.08),inset 0 3px 8px rgba(255,255,255,.55)}
+.course.open::before{box-shadow:0 8px 18px rgba(20,24,32,.07)}.tint-dot.on{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--brand),0 6px 14px rgba(20,24,32,.13)}
+@media(max-width:360px){.compact-grid{grid-template-columns:1fr}.settings-panel summary{padding:11px 12px}.choice-row{grid-auto-flow:row;grid-template-columns:1fr 1fr}}
 `;
     document.head.appendChild(st);
   })();
