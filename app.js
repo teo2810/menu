@@ -209,6 +209,23 @@
 
   function renderHeader(){
 
+    var saveMenuSettings=document.getElementById("saveMenuSettings");
+    if(saveMenuSettings) saveMenuSettings.onclick=function(){
+      var m=currentMenu(); if(!m) return;
+      m.type=document.getElementById("menuType").value;
+      m.period=document.getElementById("menuPeriod").value.trim();
+      m.validFrom=document.getElementById("menuValidFrom").value;
+      m.validTo=document.getElementById("menuValidTo").value;
+      var cm=document.getElementById("menuCycle").value;
+      m.cycle={mode:cm,weeks:cm==="single"?1:Math.max(1,(m.weeks||[]).length)};
+      var labels=document.getElementById("menuSections").value.split(",").map(function(x){return x.trim();}).filter(Boolean);
+      if(labels.length) m.sections=labels.map(function(label,i){
+        var known={primo:"primo",secondo:"secondo",contorno:"contorno",frutta:"frutta",merenda:"merenda"};
+        var low=label.toLowerCase(), id=known[low] || ("section"+(i+1));
+        return {id:id,label:label};
+      });
+      saveLibrary(); renderAll(); toast("Impostazioni salvate");
+    };
     var sendReport = document.getElementById("sendReport");
     if (sendReport) sendReport.onclick = async function(){
       var m = currentMenu();
@@ -367,6 +384,17 @@
     return "<div class='meal-card tint-card'><div class=tint-head><b>Tinta</b><span class=status id=tintName>"+name+"</span></div><div class=tint-rail>"+dots+"</div></div>";
   }
 
+  function menuSettingsCardHtml(){
+    var m=currentMenu(); if(!m) return "";
+    var type=m.type||"school", cycle=(m.cycle&&m.cycle.mode)||"weekly";
+    return "<div class='meal-card'><h2>Impostazioni menu</h2>"+
+      "<div class=field><label>Tipo</label><select id=menuType><option value=school"+(type==="school"?" selected":"")+">Scuola</option><option value=work"+(type==="work"?" selected":"")+">Lavoro</option><option value=event"+(type==="event"?" selected":"")+">Evento / festa</option><option value=other"+(type==="other"?" selected":"")+">Altro</option></select></div>"+
+      "<div class=field><label>Periodo</label><input id=menuPeriod value='"+esc(m.period||"")+"' placeholder='Es. Menu invernale'></div>"+
+      "<div class=actions><div class=field><label>Valido dal</label><input id=menuValidFrom type=date value='"+esc(m.validFrom||"")+"'></div><div class=field><label>Al</label><input id=menuValidTo type=date value='"+esc(m.validTo||"")+"'></div></div>"+
+      "<div class=field><label>Ciclo</label><select id=menuCycle><option value=weekly"+(cycle==="weekly"?" selected":"")+">Settimanale ciclico</option><option value=single"+(cycle==="single"?" selected":"")+">Evento singolo</option></select></div>"+
+      "<div class=field><label>Sezioni</label><input id=menuSections value='"+esc((m.sections||[]).map(function(x){return x.label;}).join(", "))+"' placeholder='Antipasto, Primo, Secondo, Dolce'></div>"+
+      "<button type=button class='btn btn-primary btn-wide' id=saveMenuSettings>Salva impostazioni</button></div>";
+  }
   function reportCardHtml(){
     var m = currentMenu();
     if (!m) return "";
@@ -388,7 +416,7 @@
             "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M4 7h16'/><path d='M9 7V5h6v2'/><path d='M7 7l1 13h8l1-13'/></svg></button></span></div>";
         }).join("")
       : "<div class=note>Ancora nessun menu. Vai su Importa.</div>";
-    box.innerHTML = tintCardHtml() + libraryCardHtml(false) + reportCardHtml() + list;
+    box.innerHTML = tintCardHtml() + menuSettingsCardHtml() + libraryCardHtml(false) + reportCardHtml() + list;
   }
   function bind(){
     document.querySelectorAll(".course").forEach(function(el){
