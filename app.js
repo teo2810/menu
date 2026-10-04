@@ -154,13 +154,24 @@
     });
   }
 
-  var ICONS = {
-    primo:   '<img src="icons/primo.png" alt="" width="36" height="36">',
-    secondo: '<img src="icons/secondo.png" alt="" width="36" height="36">',
-    contorno:'<img src="icons/contorno.png" alt="" width="36" height="36">',
-    frutta:  '<img src="icons/frutta.png" alt="" width="36" height="36">',
-    merenda: '<img src="icons/merenda.png" alt="" width="36" height="36">'
+  var ICON_FILES={
+    primo:"primo.png",secondo:"secondo.png",contorno:"contorno.png",frutta:"frutta.png",merenda:"merenda.png",
+    antipasto:"antipasto.svg",dolce:"dolce.svg",bevande:"bevande.svg",bevanda:"bevande.svg",
+    insalata:"insalata.svg",pesce:"pesce.svg",formaggio:"formaggio.svg",pane:"pane.svg",
+    yogurt:"yogurt.svg",acqua:"acqua.svg",succo:"succo.svg",zuppa:"zuppa.svg"
   };
+  function iconForSection(sec){
+    var id=String(sec&&sec.id||"").toLowerCase(), label=String(sec&&sec.label||"").toLowerCase();
+    var aliases=[
+      [/antipast|starter/,"antipasto"],[/dolce|dessert|torta|cake/,"dolce"],[/bev|drink/,"bevande"],
+      [/insalat|verdura|salad/,"insalata"],[/pesc|fish/,"pesce"],[/formagg|cheese/,"formaggio"],
+      [/pane|bread/,"pane"],[/yogurt/,"yogurt"],[/acqua|water/,"acqua"],[/succo|juice/,"succo"],[/zuppa|soup|minestra/,"zuppa"]
+    ];
+    var key=ICON_FILES[id]?id:"";
+    if(!key) aliases.some(function(x){if(x[0].test(label)){key=x[1];return true;}return false;});
+    if(key) return '<img src="icons/'+ICON_FILES[key]+'" alt="" width="36" height="36">';
+    return '<span class=generic-food-icon aria-hidden=true>🍽</span>';
+  }
   var ALLERGENS = {
     1:"Glutine", 2:"Crostacei", 3:"Uova", 4:"Pesce", 5:"Arachidi",
     6:"Soia", 7:"Latte", 8:"Frutta a guscio", 9:"Sedano", 10:"Senape",
@@ -314,7 +325,7 @@
     var m=currentMenu();
     var rows=sectionsOf(m).map(function(sec){ return [sec.id,sec.label,d&&d[sec.id],d&&d[sec.id+"A"]]; }).filter(function(x){return x[2];});
     var body=rows.length ? rows.map(function(x){
-      var icon=ICONS[x[0]] || '<span aria-hidden=true style="font-size:24px">•</span>';
+      var sec=sectionsOf(m).find(function(q){return q.id===x[0];}) || {id:x[0],label:x[1]}; var icon=iconForSection(sec);
       return "<div class=course data-course="+x[0]+"><div class='ico svg-"+x[0]+"'>"+icon+"</div><div class=course-body><div class=label>"+esc(x[1])+"</div><div class=dish>"+esc(x[2])+"</div><div class=hint>Tocca per gli allergeni</div></div>"+allergenBox(x[3])+"</div>";
     }).join("") : "<p class=status>Giorno vuoto. Tocca Correggi.</p>";
     var day=DAYS.find(function(x){return x.id===dayId;});
