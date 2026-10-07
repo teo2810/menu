@@ -11,6 +11,9 @@
   var API_BASE = "https://menu-api.teofalce.workers.dev";
   var OFFICIAL_INDEX = "./data/menus.json";
   var OFFICIAL_STORE = "menu-official-cache-v1";
+  var CLOUD_KEY_STORE = "menu-cloud-key-v1";
+  var CLOUD_META_STORE = "menu-cloud-meta-v1";
+  var cloudRevision = 0, cloudApplying = false, cloudTimer = null, cloudBusy = false;
 
   function loadOfficialCache(){
     try { return JSON.parse(localStorage.getItem(OFFICIAL_STORE) || "[]"); } catch(e) { return []; }
@@ -119,10 +122,78 @@
   }
   var lib = loadLibrary();
   var state = { menus:lib.menus, activeId:lib.activeId, week:0, day:"lunedi", edit:null };
-  function saveLibrary(){ localStorage.setItem(STORE, JSON.stringify({ menus:state.menus, activeId:state.activeId })); }
+  var todayOffset = 0;
+  var weeklyContext = "";
+  function saveLibrary(){
+    localStorage.setItem(STORE, JSON.stringify({ menus:state.menus, activeId:state.activeId }));
+    if (!cloudApplying && getCloudKey()) queueCloudSave();
+  }
+  function getCloudKey(){ try{return (localStorage.getItem(CLOUD_KEY_STORE)||"").trim();}catch(e){return "";} }
+  function getCloudMeta(){ try{return JSON.parse(localStorage.getItem(CLOUD_META_STORE)||"null")||{};}catch(e){return {};} }
+  function setCloudMeta(x){ try{localStorage.setItem(CLOUD_META_STORE,JSON.stringify(x||{}));}catch(e){} }
+  async function fingerprint(obj){
+    var data=new TextEncoder().encode(JSON.stringify(obj));
+    var hash=await crypto.subtle.digest("SHA-256",data);
+    return Array.from(new Uint8Array(hash)).map(function(b){return b.toString(16).padStart(2,"0");}).join("");
+  }
+  async function cloudRequest(method,payload){
+    var key=getCloudKey(); if(!key) throw new Error("Chiave sync mancante");
+    var opt={method:method,headers:{"X-Menu-Key":key,"Content-Type":"application/json"},cache:"no-store"};
+    if(payload) opt.body=JSON.stringify(payload);
+    var r=await fetch(API_BASE+"/api/library",opt), d={}; try{d=await r.json();}catch(e){}
+    if(r.status===401) throw new Error("Chiave sync non valida");
+    if(!r.ok) { var er=new Error(d.error||("HTTP "+r.status)); er.status=r.status; er.data=d; throw er; }
+    return d;
+  }
+  function uniqueId(base,used){ var id=base||("menu-"+Date.now()); var n=1; while(used[id]) id=(base||"menu")+"-locale-"+(n++); used[id]=1; return id; }
+  function mergeCloudPayload(local,remote){
+    var out=[], used={};
+    (remote.menus||[]).forEach(function(m){out.push(m);used[m.id]=1;});
+    (local.menus||[]).forEach(function(m){
+      var r=out.find(function(x){return x.id===m.id;});
+      if(!r){out.push(m);used[m.id]=1;return;}
+      if(JSON.stringify(r)===JSON.stringify(m)) return;
+      var copy=JSON.parse(JSON.stringify(m)); copy.id=uniqueId(m.id,used); copy.name=(copy.name||"Menu")+" (copia locale)"; out.push(copy);
+    });
+    var active=local.activeId && out.some(function(m){return m.id===local.activeId;}) ? local.activeId : (remote.activeId|| (out[0]&&out[0].id)||null);
+    return {kind:"menu-library",version:2,menus:out,activeId:active};
+  }
+  function applyCloudPayload(p){
+    cloudApplying=true;
+    try{ state.menus=Array.isArray(p.menus)?p.menus:[]; state.activeId=p.activeId&&state.menus.some(function(m){return m.id===p.activeId;})?p.activeId:(state.menus[0]&&state.menus[0].id)||null; saveLibrary(); }
+    finally{cloudApplying=false;}
+  }
+  async function syncCloud(silent){
+    if(cloudBusy||!getCloudKey()||!navigator.onLine) return; cloudBusy=true;
+    try{
+      var remote=await cloudRequest("GET"), local=libraryPayload(), meta=getCloudMeta();
+      cloudRevision=remote.revision||0; var localFp=await fingerprint(local);
+      if(!cloudRevision){
+        var created=await cloudRequest("PUT",Object.assign({},local,{baseRevision:0})); cloudRevision=created.revision||1; setCloudMeta({revision:cloudRevision,fingerprint:localFp});
+      } else if(meta.revision===cloudRevision && meta.fingerprint===localFp){
+        // already aligned
+      } else if(meta.revision===cloudRevision && meta.fingerprint && meta.fingerprint!==localFp){
+        var pushed=await cloudRequest("PUT",Object.assign({},local,{baseRevision:cloudRevision})); cloudRevision=pushed.revision; setCloudMeta({revision:cloudRevision,fingerprint:localFp});
+      } else if(meta.fingerprint===localFp){
+        applyCloudPayload(remote); var rf=await fingerprint(libraryPayload()); setCloudMeta({revision:cloudRevision,fingerprint:rf}); renderAll();
+      } else {
+        var merged=mergeCloudPayload(local,remote); applyCloudPayload(merged); var mf=await fingerprint(libraryPayload());
+        var saved=await cloudRequest("PUT",Object.assign({},libraryPayload(),{baseRevision:cloudRevision})); cloudRevision=saved.revision; setCloudMeta({revision:cloudRevision,fingerprint:mf}); renderAll();
+      }
+      if(!silent) toast("Menu sincronizzati");
+    }catch(e){ if(!silent) toast(e.message||"Sync non riuscita"); }finally{cloudBusy=false; renderCloudStatus();}
+  }
+  function queueCloudSave(){ clearTimeout(cloudTimer); cloudTimer=setTimeout(function(){syncCloud(true);},900); }
+  function renderCloudStatus(){ var el=document.getElementById("cloudStatus"); if(!el)return; el.textContent=!getCloudKey()?"Non attiva":(!navigator.onLine?"Offline · modifiche salvate sul dispositivo":(cloudBusy?"Sincronizzazione…":"Attiva")); }
+  function cloudCardHtml(){
+    var on=!!getCloudKey();
+    var status=on?(navigator.onLine?"Sincronizzato":"Offline") : "Non attivo";
+    return "<details class='settings-panel' "+(on?"":"open")+"><summary><span><b>Sincronizzazione</b><small id=cloudStatus>"+status+"</small></span><i></i></summary><div class=panel-body>"+
+      (on?"<div class=compact-actions><button type=button class='btn btn-primary' id=cloudSync>Sincronizza ora</button><button type=button class='btn btn-ghost' id=cloudDisconnect>Disconnetti</button></div>":"<div class=field><label>Chiave privata</label><input id=cloudKey type=password autocomplete=off placeholder='Chiave di sincronizzazione'></div><button type=button class='btn btn-primary btn-wide' id=cloudConnect>Attiva sincronizzazione</button>")+"</div></details>";
+  }
   function currentMenu(){ return state.menus.find(function(m){ return m.id === state.activeId; }) || state.menus[0] || null; }
   function esc(s){
-    return String(s || "").replace(/&/g,"&"+"amp;").replace(/</g,"&"+"lt;").replace(/>/g,"&"+"gt;").replace(/"/g,"&"+"quot;");
+    return String(s || "").replace(/&/g,"&"+"amp;").replace(/</g,"&"+"lt;").replace(/>/g,"&"+"gt;").replace(/"/g,"&"+"quot;").replace(/'/g,"&#39;");
   }
   function toast(msg){ var el = document.getElementById("toast"); if (!el) return; el.textContent = msg; el.classList.add("show"); setTimeout(function(){ el.classList.remove("show"); }, 2200); }
   function goTab(name){ if (window.setTab) window.setTab(name); }
@@ -142,11 +213,11 @@
     if (!state.menus.length) { box.innerHTML = "<p class=status>Nessun menu salvato.</p>"; return; }
     box.innerHTML = state.menus.map(function(item){
       var on = item.id === state.activeId ? " on" : "";
-      return "<button type=button class='pick-row"+on+"' data-pick="+JSON.stringify(item.id)+"><span>"+esc(item.name)+"</span><span class=pick-dot></span></button>";
+      return "<button type=button class='pick-row"+on+"' data-pick=\""+esc(item.id)+"\"><span>"+esc(item.name)+"</span><span class=pick-dot></span></button>";
     }).join("");
     box.querySelectorAll("[data-pick]").forEach(function(b){
       b.onclick = function(){
-        state.activeId = b.getAttribute("data-pick");
+        state.activeId = b.getAttribute("data-pick"); state.week=0; closeCellBar();
         saveLibrary();
         closeModal("pickModal");
         renderAll();
@@ -261,6 +332,24 @@
     return "";
   }
 
+  function displayedDate(){
+    var date = new Date();
+    date.setHours(12,0,0,0);
+    date.setDate(date.getDate()+todayOffset);
+    return date;
+  }
+  function menuWeekForDate(menu,date){
+    var vis=filledWeekIdx(menu), calculated=weekIndexForDate(menu,date);
+    if(menu.cycle&&menu.cycle.mode==="single") return 0;
+    return vis.length===1 ? vis[0] : (vis.length ? (vis.indexOf(calculated)>=0?calculated:vis[calculated%vis.length]) : calculated);
+  }
+  function selectCurrentWeekday(){
+    var menu=currentMenu(), now=new Date();
+    state.week=menu ? menuWeekForDate(menu,now) : 0;
+    state.day=DAYS[(now.getDay()+6)%7 < 5 ? (now.getDay()+6)%7 : 0].id;
+    weeklyContext=state.activeId+":"+now.toDateString();
+  }
+
   function renderHeader(){
     var pick = document.getElementById("menuPick");
     if (!pick) return;
@@ -270,8 +359,8 @@
       document.getElementById("periodPill").textContent = "Vuoto";
       return;
     }
-    pick.textContent = m ? m.name : "Scegli menu";
-    document.getElementById("periodPill").textContent = (m && (m.period || m.name)) || "Senza periodo";
+    pick.textContent = m ? m.name+" · Cambia menu" : "Scegli menu";
+    document.getElementById("periodPill").textContent = (m && (periodFromDates(m.validFrom,m.validTo) || m.period)) || "Date non impostate";
   }
   function dishFilled(m,menu){
     return !!(m && sectionsOf(menu||currentMenu()).some(function(sec){ return String(m[sec.id]||"").trim(); }));
@@ -297,22 +386,24 @@
   function renderOggi(){
     var box = document.getElementById("screen-oggi");
     var m = currentMenu();
-    if (!m) return;
-    var now = new Date();
+    if (!m) {box.innerHTML="<div class='meal-card empty'><h2>Nessun menu</h2><button class='btn btn-primary btn-wide' id=goImport>Importa il primo menu</button></div>";return;}
+    var now = displayedDate();
     var map = {1:"lunedi",2:"martedi",3:"mercoledi",4:"giovedi",5:"venerdi"};
     var dayId = map[now.getDay()];
-    var vis = filledWeekIdx(m);
-    var calculated=weekIndexForDate(m,now); var week=vis.length===1 ? vis[0] : (vis.length ? (vis.indexOf(calculated)>=0?calculated:vis[calculated%vis.length]) : calculated);
+    var week=menuWeekForDate(m,now);
     var nice = now.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"});
     var validity=validityText(m);
-    if(!menuIsValidOn(m,now)){ box.innerHTML="<div class=hero-today><div class=kicker>"+esc(m.name)+"</div><h2>"+nice+"</h2></div><div class='meal-card empty'><h2>Menu non attivo oggi</h2><p class=status>"+esc(validity||"Controlla il periodo di validità.")+"</p></div>"; return; }
-    box.innerHTML = "<div class=hero-today><div class=kicker>"+esc(m.name)+(validity?" · "+esc(validity):"")+"</div><h2>"+nice+"</h2></div>"+(dayId&&m.weeks[week]?mealHtml(m.weeks[week].days[dayId],week,dayId):"<div class=meal-card><p>Nessun menu previsto oggi.</p></div>");
+    var navigation="<p class=status>Scorri a sinistra per il giorno dopo, a destra per quello prima.</p>";
+    if(!menuIsValidOn(m,now)){ box.innerHTML="<div class=hero-today><div class=kicker>"+esc(m.name)+"</div><h2>"+nice+"</h2></div>"+navigation+"<div class='meal-card empty'><h2>Menu non attivo in questa data</h2><p class=status>"+esc(validity||"Controlla il periodo di validità.")+"</p></div>"; return; }
+    box.innerHTML = "<div class=hero-today><div class=kicker>"+esc(m.name)+(validity?" · "+esc(validity):"")+"</div><h2>"+nice+"</h2></div>"+navigation+(dayId&&m.weeks[week]?mealHtml(m.weeks[week].days[dayId],week,dayId):"<div class=meal-card><p>Nessun menu previsto in questa data.</p></div>");
   }
   function renderSettimane(){
     var box = document.getElementById("screen-settimane");
     var m = currentMenu();
+    if(weeklyContext!==state.activeId+":"+new Date().toDateString()) selectCurrentWeekday();
     if (!m) { box.innerHTML = "<div class=meal-card empty><h2>Nessun menu</h2><button class='btn btn-primary btn-wide' id=goImport>Importa il primo menu</button></div>"; return; }
-    var vis = filledWeekIdx(m);
+    if (!m.weeks[state.week]) state.week=0;
+    var vis = m.cycle&&m.cycle.mode==="single" ? [0] : m.weeks.map(function(w,i){return i;});
     if (vis.length && vis.indexOf(state.week)<0) state.week = vis[0];
     var tabs = vis.length<=1 ? "" : m.weeks.map(function(w,i){
       if (vis.length && vis.indexOf(i)<0) return "";
@@ -402,59 +493,151 @@
     return "<div class='meal-card tint-card'><div class=tint-head><b>Tinta</b><span class=status id=tintName>"+name+"</span></div><div class=tint-rail>"+dots+"</div></div>";
   }
 
+  function formatDateIT(v){
+    var d=parseDateOnly(v); if(!d) return "";
+    return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();
+  }
+  function typeLabel(v){ return ({school:"Scuola",work:"Lavoro",event:"Evento / festa",other:"Altro"})[v]||"Altro"; }
+  function periodFromDates(a,b){
+    if(a&&b) return formatDateIT(a)+" – "+formatDateIT(b);
+    if(a) return "Dal "+formatDateIT(a);
+    if(b) return "Fino al "+formatDateIT(b);
+    return "";
+  }
+  function activeMenuBannerHtml(){
+    var m=currentMenu(); if(!m) return "";
+    var dates=periodFromDates(m.validFrom,m.validTo), period=dates||(m.period||"Nessun periodo impostato");
+    var sync=getCloudKey()?(navigator.onLine?"Cloud attivo":"Offline"):"Solo dispositivo";
+    return "<section class='active-menu-banner'><div class=active-menu-kicker>MENU ATTIVO <span>"+esc(sync)+"</span></div><h2>"+esc(m.name)+"</h2><div class=active-menu-meta><b>"+esc(typeLabel(m.type))+"</b><span>"+esc(period)+"</span></div><button type=button class='btn btn-ghost btn-wide' id=changeActiveMenu>Cambia menu</button></section>";
+  }
+  function choiceHtml(name,value,items){
+    return "<div class=choice-row data-choice="+name+">"+items.map(function(x){return "<button type=button class='choice-chip"+(x[0]===value?" on":"")+"' data-value='"+x[0]+"'>"+esc(x[1])+"</button>";}).join("")+"<input type=hidden id="+name+" value='"+esc(value)+"'></div>";
+  }
+  function periodDescription(menu){
+    var text=String(menu.period||"").trim();
+    var dates=periodFromDates(menu.validFrom,menu.validTo);
+    return dates && text===dates ? "" : text;
+  }
   function menuSettingsCardHtml(){
     var m=currentMenu(); if(!m) return "";
     var type=m.type||"school", cycle=(m.cycle&&m.cycle.mode)||"weekly";
-    return "<div class='meal-card'><h2>Impostazioni menu</h2>"+
-      "<div class=field><label>Tipo</label><select id=menuType><option value=school"+(type==="school"?" selected":"")+">Scuola</option><option value=work"+(type==="work"?" selected":"")+">Lavoro</option><option value=event"+(type==="event"?" selected":"")+">Evento / festa</option><option value=other"+(type==="other"?" selected":"")+">Altro</option></select></div>"+
-      "<div class=field><label>Periodo</label><input id=menuPeriod value='"+esc(m.period||"")+"' placeholder='Es. Menu invernale'></div>"+
-      "<div class=actions><div class=field><label>Valido dal</label><input id=menuValidFrom type=date value='"+esc(m.validFrom||"")+"'></div><div class=field><label>Al</label><input id=menuValidTo type=date value='"+esc(m.validTo||"")+"'></div></div>"+
-      "<div class=field><label>Ciclo</label><select id=menuCycle><option value=weekly"+(cycle==="weekly"?" selected":"")+">Settimanale ciclico</option><option value=single"+(cycle==="single"?" selected":"")+">Evento singolo</option></select></div>"+
-      "<div class=field><label>Sezioni</label><input id=menuSections value='"+esc((m.sections||[]).map(function(x){return x.label;}).join(", "))+"' placeholder='Antipasto, Primo, Secondo, Dolce'></div>"+
-      "<button type=button class='btn btn-primary btn-wide' id=saveMenuSettings>Salva impostazioni</button></div>";
+    return "<details class='settings-panel'><summary><span><b>Impostazioni menu</b><small>"+esc(typeLabel(type))+" · "+(cycle==="weekly"?esc((m.weeks||[]).length+" settimane"):"menu singolo")+"</small></span><i></i></summary><div class=panel-body>"+
+      "<div class=field><label for=menuName>Nome menu</label><input id=menuName maxlength=200 value=\""+esc(m.name)+"\"></div>"+
+      "<div class=field><label>Tipo</label>"+choiceHtml("menuType",type,[["school","Scuola"],["work","Lavoro"],["event","Evento"],["other","Altro"]])+"</div>"+
+      "<div class=field><label>Ciclo</label>"+choiceHtml("menuCycle",cycle,[["weekly","Settimanale"],["single","Singolo"]])+"</div>"+
+      "<div class=compact-grid><div class=field><label for=menuValidFrom>Dal</label><input id=menuValidFrom type=date value='"+esc(m.validFrom||"")+"'></div><div class=field><label for=menuValidTo>Al</label><input id=menuValidTo type=date value='"+esc(m.validTo||"")+"'></div></div>"+
+      "<div class=field><label>Descrizione <small>facoltativa, senza ripetere le date</small></label><input id=menuPeriod value='"+esc(periodDescription(m))+"' placeholder='Es. Menu invernale'></div>"+
+      "<div class=field><label>Sezioni</label><input id=menuSections value='"+esc(sectionsOf(m).map(function(x){return x.label;}).join(", "))+"' placeholder='Primo, Secondo, Contorno'></div>"+
+      "<button type=button class='btn btn-primary btn-wide' id=saveMenuSettings>Salva impostazioni</button></div></details>";
   }
+  var admin={key:"",reports:[],filter:"open",offset:0,more:false,busy:false,error:"",connected:false};
+  function adminCardHtml(){
+    return "<details class='settings-panel' id=adminPanel><summary><span><b>Admin · Segnalazioni</b><small>Leggi, risolvi e riapri le segnalazioni</small></span><i></i></summary><div class=panel-body id=adminBody></div></details>";
+  }
+  async function adminRequest(method,path,body){
+    var controller=new AbortController(), timer=setTimeout(function(){controller.abort();},15000);
+    try{
+      var r=await fetch(API_BASE+"/api/admin/reports"+path,{method:method,headers:{"X-Menu-Admin-Key":admin.key,"Content-Type":"application/json"},cache:"no-store",signal:controller.signal,body:body?JSON.stringify(body):undefined});
+      var d=await r.json().catch(function(){return {};});
+      if(r.status===401){admin.key="";admin.connected=false;admin.reports=[];throw new Error("Chiave Admin non valida");}
+      if(r.status===404) throw new Error(method==="GET"?"Area Admin non disponibile: aggiorna il Worker Cloudflare.":"Segnalazione non trovata. Aggiorna l’elenco.");
+      if(!r.ok||!d.ok) throw new Error(d.error||("Errore "+r.status));
+      return d;
+    }catch(e){if(e.name==="AbortError")throw new Error("Connessione scaduta. Riprova.");throw e;}
+    finally{clearTimeout(timer);}
+  }
+  async function loadReports(reset){
+    if(admin.busy)return;
+    admin.busy=true;admin.error="";paintAdmin();
+    var offset=reset?0:admin.offset;
+    try{
+      var d=await adminRequest("GET","?status="+encodeURIComponent(admin.filter)+"&offset="+offset);
+      if(!Array.isArray(d.reports))throw new Error("Risposta Admin non valida");
+      admin.reports=reset?d.reports:admin.reports.concat(d.reports);
+      admin.offset=offset+d.reports.length;admin.more=!!d.hasMore;admin.connected=true;
+    }catch(e){admin.error=e.message;}
+    finally{admin.busy=false;paintAdmin();}
+  }
+  function paintAdmin(){
+    var box=document.getElementById("adminBody");if(!box)return;
+    if(!admin.connected){
+      box.innerHTML="<p class=status>Usa la chiave Admin, distinta dalla chiave di sincronizzazione. Resta in memoria solo fino alla chiusura della pagina.</p><div class=field><label for=adminKey>Chiave Admin</label><input id=adminKey type=password autocomplete=off></div><button type=button class='btn btn-primary btn-wide' id=adminLogin "+(admin.busy?"disabled":"")+">"+(admin.busy?"Accesso…":"Accedi")+"</button><p class=admin-message role=status>"+esc(admin.error)+"</p>";
+      document.getElementById("adminLogin").onclick=function(){var key=document.getElementById("adminKey").value.trim();if(!key){toast("Inserisci la chiave Admin");return;}admin.key=key;loadReports(true);};
+      return;
+    }
+    box.innerHTML="<div class=field><label for=adminFilter>Mostra</label><select id=adminFilter "+(admin.busy?"disabled":"")+"><option value=open>Aperte</option><option value=resolved>Risolte</option><option value=all>Tutte</option></select></div><div class=admin-controls><button type=button class='btn btn-ghost' id=adminRefresh>Aggiorna</button><button type=button class='btn btn-ghost' id=adminLogout>Esci</button></div><p class=admin-message role=status>"+esc(admin.busy?"Caricamento…":admin.error||admin.reports.length+" segnalazioni caricate")+"</p>"+
+      admin.reports.map(function(r,i){var m=state.menus.find(function(x){return x.id===r.menu_id;});return "<article class=admin-report><b>"+esc(m?m.name:r.menu_id)+"</b><br><small>#"+esc(r.id)+" · "+esc(r.created_at)+" · "+(r.status==="resolved"?"Risolta":"Aperta")+"</small><p>"+esc(r.context)+"</p><p>"+esc(r.message)+"</p><button type=button class='btn btn-ghost btn-wide' data-report-index='"+i+"' "+(admin.busy?"disabled":"")+">"+(r.status==="resolved"?"Riapri":"Segna come risolta")+"</button></article>";}).join("")+
+      (!admin.reports.length&&!admin.busy&&!admin.error?"<p class=status>Nessuna segnalazione per questo filtro.</p>":"")+(admin.more?"<button type=button class='btn btn-ghost btn-wide' id=adminMore>Carica altre</button>":"");
+    var filter=document.getElementById("adminFilter");filter.value=admin.filter;
+    filter.onchange=function(){admin.filter=filter.value;admin.reports=[];loadReports(true);};
+    document.getElementById("adminRefresh").onclick=function(){loadReports(true);};
+    document.getElementById("adminLogout").disabled=admin.busy;
+    document.getElementById("adminLogout").onclick=function(){admin.key="";admin.connected=false;admin.reports=[];admin.error="";paintAdmin();};
+    var more=document.getElementById("adminMore");if(more){more.disabled=admin.busy;more.onclick=function(){loadReports(false);};}
+    box.querySelectorAll("[data-report-index]").forEach(function(b){b.onclick=async function(){
+      if(admin.busy)return;var report=admin.reports[Number(b.dataset.reportIndex)];
+      admin.busy=true;admin.error="";paintAdmin();
+      try{await adminRequest("PATCH","/"+encodeURIComponent(report.id),{status:report.status==="resolved"?"open":"resolved"});admin.busy=false;await loadReports(true);}
+      catch(e){admin.error=e.message;admin.busy=false;paintAdmin();}
+    };});
+  }
+  function wireAdmin(){paintAdmin();}
+
   function reportCardHtml(){
-    var m = currentMenu();
-    if (!m) return "";
-    return "<div class='meal-card report-card'><h2>Segnala un problema</h2>"+
-      "<p class=status>La segnalazione viene inviata senza nome, email o telefono.</p>"+
+    var m=currentMenu(); if(!m) return "";
+    return "<details class='settings-panel'><summary><span><b>Segnala un problema</b><small>Invio anonimo</small></span><i></i></summary><div class=panel-body>"+
       "<div class=field><label>Riferimento</label><input id=reportContext maxlength=500 placeholder='Es. Seconda settimana · Martedi'></div>"+
-      "<div class=field><label>Problema</label><textarea id=reportMessage maxlength=1000 placeholder='Descrivi cosa non torna'></textarea></div>"+
+      "<div class=field><label>Problema</label><textarea class=compact-textarea id=reportMessage maxlength=1000 placeholder='Descrivi cosa non torna'></textarea></div>"+
       "<input id=reportWebsite tabindex=-1 autocomplete=off aria-hidden=true style='position:absolute;left:-9999px;width:1px;height:1px'>"+
-      "<button type=button class='btn btn-primary btn-wide' id=sendReport>Invia segnalazione</button></div>";
+      "<button type=button class='btn btn-primary btn-wide' id=sendReport>Invia segnalazione</button></div></details>";
   }
   function renderInfo(){
-    var box = document.getElementById("screen-info");
-    var list = state.menus.length
-      ? "<h3 style='font-family:Fraunces,serif'>I tuoi menu</h3>"+state.menus.map(function(item){
-          return "<div class='allergen-row menu-row'><input class=menu-rename data-rename="+item.id+" value=\""+esc(item.name)+"\" aria-label=Nome>"+
-            "<span><button type=button class=ico-btn data-use="+item.id+" aria-label=Apri>"+
-            "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M9 6h11v12H9'/><path d='M13 12H4'/><path d='M8 8l-4 4 4 4'/></svg></button>"+
-            "<button type=button class='ico-btn danger' data-del="+item.id+" aria-label=Elimina>"+
-            "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2'><path d='M4 7h16'/><path d='M9 7V5h6v2'/><path d='M7 7l1 13h8l1-13'/></svg></button></span></div>";
-        }).join("")
-      : "<div class=note>Ancora nessun menu. Vai su Importa.</div>";
-    box.innerHTML = tintCardHtml() + menuSettingsCardHtml() + libraryCardHtml(false) + reportCardHtml() + list;
+    var box=document.getElementById("screen-info");
+    var list=state.menus.length ? state.menus.map(function(item){
+      var active=item.id===state.activeId?" active":"";
+      return "<div class='menu-manage-row"+active+"'><button type=button class='menu-select' data-use=\""+esc(item.id)+"\" aria-pressed='"+!!active+"'><b>"+esc(item.name)+"</b><small>"+(active?"Attivo":"Usa questo menu")+"</small></button><button type=button class='ico-btn danger' data-del=\""+esc(item.id)+"\" aria-label=\"Elimina "+esc(item.name)+"\"><svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' aria-hidden='true'><path d='M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13'/></svg></button></div>";
+    }).join("") : "<p class=status>Ancora nessun menu.</p>";
+    var dataPanel="<details class='settings-panel'><summary><span><b>Dati e backup</b><small>Esporta o ripristina i menu</small></span><i></i></summary><div class=panel-body><div class=compact-actions><button type=button class='btn btn-primary' data-save-copy>Salva copia</button><button type=button class='btn btn-ghost' data-load-copy>Carica copia</button></div>"+exportCardHtml().replace('class=\"meal-card export-card\"','class=\"embedded-export export-card\"')+"<input id='fileLibrary' type='file' accept='.json,application/json' hidden></div></details>";
+    box.innerHTML="<div class='info-title'><h2>Menu e impostazioni</h2><p>Scegli il menu e personalizza l’app</p></div>"+activeMenuBannerHtml()+
+      "<section class='settings-card'><div class='settings-head'><b>I tuoi menu</b><span>"+state.menus.length+"</span></div><div class=menu-manage-list>"+list+"</div></section>"+
+      "<section class='settings-card settings-stack'>"+cloudCardHtml()+menuSettingsCardHtml()+dataPanel+reportCardHtml()+adminCardHtml()+"</section>"+
+      "<section class='settings-card tint-compact'>"+tintCardHtml().replace("class='meal-card tint-card'","class='tint-card'")+"</section>";
   }
   function bind(){
+    var change=document.getElementById("changeActiveMenu");
+    if(change) change.onclick=function(){renderPickList();openModal("pickModal");};
+    wireAdmin();
     var saveMenuSettings=document.getElementById("saveMenuSettings");
     if(saveMenuSettings) saveMenuSettings.onclick=function(){
       var m=currentMenu(); if(!m) return;
       var oldSections=sectionsOf(m).slice();
+      var from=document.getElementById("menuValidFrom").value, to=document.getElementById("menuValidTo").value;
+      if(from && to && from>to){toast("La data Al deve seguire la data Dal");return;}
+      var name=document.getElementById("menuName").value.trim();
+      if(!name){toast("Inserisci il nome del menu");return;}
+      m.name=name;
       m.type=document.getElementById("menuType").value;
-      m.period=document.getElementById("menuPeriod").value.trim();
       m.validFrom=document.getElementById("menuValidFrom").value;
       m.validTo=document.getElementById("menuValidTo").value;
+      var manualPeriod=document.getElementById("menuPeriod").value.trim();
+      m.period=manualPeriod;
       var cm=document.getElementById("menuCycle").value;
       var labels=document.getElementById("menuSections").value.split(",").map(function(x){return x.trim();}).filter(Boolean);
-      var newSections=labels.length?labels.map(function(label,i){return {id:sectionId(label,i),label:label};}):oldSections;
+      var newSections=labels.length?labels.map(function(label,i){var existing=oldSections.find(function(sec){return sec.label===label;}); return {id:existing?existing.id:sectionId(label,i),label:label};}):oldSections;
       m.sections=newSections;
       (m.weeks||[]).forEach(function(w){DAYS.forEach(function(d){w.days[d.id]=ensureMealShape(w.days[d.id],newSections);});});
-      if(cm==="single" && m.weeks.length>1) m.weeks=m.weeks.slice(0,1);
+      // Keep all stored weeks so switching back never discards dishes.
       while(cm==="weekly" && m.weeks.length<4) m.weeks.push({name:WEEK_NAMES[m.weeks.length]||("Settimana "+(m.weeks.length+1)),days:emptyDays(newSections)});
-      m.cycle={mode:cm,weeks:m.weeks.length};
+      m.cycle=Object.assign({},m.cycle,{mode:cm,weeks:cm==="single"?1:m.weeks.length});
+      state.week=0;
       saveLibrary(); renderAll(); toast("Impostazioni salvate");
     };
+    document.querySelectorAll("[data-choice]").forEach(function(row){
+      row.querySelectorAll(".choice-chip").forEach(function(btn){ btn.onclick=function(){
+        row.querySelectorAll(".choice-chip").forEach(function(x){x.classList.remove("on");}); btn.classList.add("on");
+        var hidden=row.querySelector("input[type=hidden]"); if(hidden) hidden.value=btn.getAttribute("data-value");
+      };});
+    });
     var sendReport=document.getElementById("sendReport");
     if(sendReport) sendReport.onclick=async function(){
       var m=currentMenu(), contextEl=document.getElementById("reportContext"), messageEl=document.getElementById("reportMessage"), websiteEl=document.getElementById("reportWebsite");
@@ -463,6 +646,17 @@
       try{await submitReport(m.id,(contextEl&&contextEl.value||"").trim(),message,websiteEl&&websiteEl.value||""); if(messageEl)messageEl.value=""; if(contextEl)contextEl.value=""; toast("Segnalazione inviata");}
       catch(e){toast(e.message||"Invio non riuscito");} finally{sendReport.disabled=false;sendReport.textContent=old;}
     };
+
+    var cloudConnect=document.getElementById("cloudConnect");
+    if(cloudConnect) cloudConnect.onclick=async function(){
+      var inp=document.getElementById("cloudKey"), key=(inp&&inp.value||"").trim(); if(key.length<16){toast("Chiave troppo corta");return;}
+      localStorage.setItem(CLOUD_KEY_STORE,key); localStorage.removeItem(CLOUD_META_STORE);
+      try{await cloudRequest("GET"); await syncCloud(false); renderAll();}
+      catch(e){localStorage.removeItem(CLOUD_KEY_STORE);localStorage.removeItem(CLOUD_META_STORE);toast(e.message||"Chiave non valida");renderAll();}
+    };
+    var cloudSync=document.getElementById("cloudSync"); if(cloudSync) cloudSync.onclick=function(){syncCloud(false);};
+    var cloudDisconnect=document.getElementById("cloudDisconnect"); if(cloudDisconnect) cloudDisconnect.onclick=function(){localStorage.removeItem(CLOUD_KEY_STORE);localStorage.removeItem(CLOUD_META_STORE);cloudRevision=0;renderAll();toast("Dispositivo disconnesso");};
+    renderCloudStatus();
 
     document.querySelectorAll(".course").forEach(function(el){
       el.onclick = function(e){
@@ -481,29 +675,14 @@
     document.querySelectorAll("[data-tint-pick]").forEach(function(b){
       b.onclick = function(){ applyTint(b.getAttribute("data-tint-pick")); };
     });
-    document.querySelectorAll("[data-use]").forEach(function(b){ b.onclick = function(){ state.activeId=b.getAttribute("data-use"); saveLibrary(); renderAll(); }; });
-    document.querySelectorAll("[data-rename]").forEach(function(inp){
-      var apply = function(){
-        var id = inp.getAttribute("data-rename");
-        var item = state.menus.find(function(x){ return x.id===id; });
-        if (!item) return;
-        var name = inp.value.trim();
-        if (!name) { inp.value = item.name; return; }
-        if (name===item.name) return;
-        item.name = name;
-        saveLibrary();
-        renderHeader();
-        toast("Nome aggiornato");
-      };
-      inp.onchange = apply;
-      inp.onkeydown = function(e){ if (e.key==="Enter") { e.preventDefault(); inp.blur(); } };
-    });
+    document.querySelectorAll("[data-use]").forEach(function(b){ b.onclick = function(){ state.activeId=b.getAttribute("data-use"); state.week=0; closeCellBar(); saveLibrary(); renderAll(); }; });
     document.querySelectorAll("[data-del]").forEach(function(b){
       b.onclick = function(){
         var id = b.getAttribute("data-del");
-        ask("Eliminare questo menu?", "Verra rimosso solo da questo telefono.", "Elimina", function(){
+        ask("Eliminare questo menu?", getCloudKey()?"Verrà eliminato anche dalla libreria sincronizzata.":"Verrà rimosso solo da questo dispositivo.", "Elimina", function(){
           state.menus = state.menus.filter(function(x){ return x.id !== id; });
-          state.activeId = state.menus[0] && state.menus[0].id;
+          if(state.activeId===id) state.activeId = (state.menus[0] && state.menus[0].id)||null;
+          state.week=0;
           saveLibrary();
           renderAll();
         });
@@ -676,7 +855,6 @@
       '<div class="field"><label>JSON</label><textarea id="jsonPaste" placeholder="{ ... }"></textarea></div>' +
       '<div class="actions"><button class="btn btn-primary" id="applyJsonPaste">Importa JSON</button><button class="btn btn-ghost" id="btnJsonFile">File .json</button></div>' +
       '<input id="fileJson" type="file" accept=".json,application/json" hidden></div>' +
-      exportCardHtml() + libraryCardHtml(true) +
       '</div>';
   }
 
@@ -694,9 +872,9 @@
   }
   function exportCardHtml(){
     if(!state.menus.length) return "";
-    return '<div class="meal-card"><h2>Esporta menu</h2><p class=status>Scegli uno o più menu. Un menu mantiene il formato singolo; più menu creano un backup V2.</p>'+
-      state.menus.map(function(m){return '<label class=pick-row><span>'+esc(m.name)+'</span><input type=checkbox data-export-menu value="'+esc(m.id)+'" '+(m.id===state.activeId?"checked":"")+'></label>';}).join("")+
-      '<button type=button class="btn btn-primary btn-wide" id=exportSelected>Esporta selezionati</button></div>';
+    return '<div class="meal-card export-card"><h2>Esporta</h2><p class=status>Scegli i menu da esportare.</p><div class="export-list">'+
+      state.menus.map(function(m){return '<label class="export-row"><span>'+esc(m.name)+'</span><input class="app-check" type=checkbox data-export-menu value="'+esc(m.id)+'" '+(m.id===state.activeId?"checked":"")+'><i aria-hidden="true"></i></label>';}).join("")+
+      '</div><button type=button class="btn btn-primary btn-wide" id=exportSelected>Esporta selezionati</button></div>';
   }
 
   function libraryCardHtml(withInput){
@@ -1342,7 +1520,7 @@
       return {id:String((x&&x.id)||sectionId(label,i)),label:label};
     }) : DEFAULT_SECTIONS.slice();
     var srcWeeks=Array.isArray(obj.weeks)?obj.weeks:[];
-    var wanted=(obj.cycle&&obj.cycle.mode==="single")?1:Math.max(1,srcWeeks.length||4);
+    var wanted=Math.max(1,srcWeeks.length||((obj.cycle&&obj.cycle.mode==="single")?1:4));
     var weeks=[];
     for(var i=0;i<wanted;i++){
       var src=srcWeeks[i]||{}, srcDays=(src&&src.days)||{}, days={};
@@ -1473,8 +1651,78 @@
     catch(e){ toast("Copia manualmente il testo"); }
   }
 
+  (function installCompactMenuUi(){
+    var st=document.createElement("style");
+    st.textContent=`
+#screen-info{padding-top:2px}.info-title{margin:0 2px 12px}.info-title h2{font-family:Fraunces,serif;font-size:1.45rem;margin:0}.info-title p{margin:2px 0 0;color:var(--muted);font-size:.78rem;font-weight:800}
+.settings-card{background:#fff;border-radius:22px;box-shadow:0 8px 24px rgba(20,24,32,.10);padding:12px;margin-bottom:10px}.settings-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.settings-head b{font-family:Fraunces,serif;font-size:1rem}.settings-head span{font-size:.72rem;font-weight:800;color:var(--brand);background:var(--brand-soft);padding:3px 8px;border-radius:999px}
+.menu-manage-list{display:grid;gap:6px}.menu-manage-row{display:flex;align-items:center;gap:6px;padding:4px;border-radius:15px;background:#faf8fc;border:1px solid var(--line)}.menu-manage-row.active{background:var(--brand-soft);border-color:transparent}.menu-manage-row .menu-rename{padding:7px 8px;font-size:.86rem}.menu-manage-row span{display:flex;gap:4px}.menu-manage-row .ico-btn{width:32px;height:32px;border-radius:10px}
+.settings-stack{padding:0;overflow:hidden}.settings-panel{border-bottom:1px solid var(--line);background:#fff}.settings-panel:last-child{border-bottom:0}.settings-panel summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;cursor:pointer}.settings-panel summary::-webkit-details-marker{display:none}.settings-panel summary span{display:grid;gap:1px}.settings-panel summary b{font-size:.88rem}.settings-panel summary small{font-size:.68rem;color:var(--muted);font-weight:800}.settings-panel summary i{width:9px;height:9px;border-right:2px solid var(--brand);border-bottom:2px solid var(--brand);transform:rotate(45deg);transition:.2s}.settings-panel[open] summary i{transform:rotate(225deg);margin-top:6px}.panel-body{padding:16px}.panel-body .field{margin:0 0 16px}.panel-body .field label{margin-bottom:8px}.panel-body>.field:last-child{margin-bottom:0}.panel-body>.compact-grid{margin-bottom:16px}.panel-body>.compact-grid>.field{margin-bottom:0}.panel-body input,.panel-body select{padding:9px 11px;border-radius:13px;font-size:.82rem}.compact-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}.panel-body,.panel-body .field,.compact-actions>*{min-width:0}.panel-body input,.panel-body select,.panel-body textarea{min-width:0;max-width:100%}.compact-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}.compact-actions .btn,.panel-body .btn{padding:10px 9px;border-radius:16px;font-size:.8rem}.compact-textarea{min-height:82px!important}
+.panel-body .export-card{margin:8px 0 0;padding:8px 0 0}.panel-body .export-row{min-height:36px;padding:5px 8px;font-size:.76rem}.export-row{position:relative}.export-row .app-check{width:1px;height:1px;padding:0;border:0}.panel-body .export-row i{width:20px;height:20px;flex-basis:20px}.panel-body .export-card h2{font-family:Nunito,system-ui,sans-serif;font-size:.82rem}.panel-body .export-card .status{display:none}
+.tint-compact{padding:11px 12px}.tint-compact .tint-card{margin:0}.tint-compact .tint-head{margin-bottom:8px}.tint-compact .tint-head b{font-family:Nunito,system-ui,sans-serif;font-size:.88rem}.tint-compact .tint-dot{height:28px}.tint-compact .tint-rail{padding:6px 8px}
+
+.active-menu-banner{position:relative;overflow:hidden;background:var(--grad);border-radius:24px;padding:15px 16px;margin:0 0 10px;box-shadow:0 10px 26px rgba(20,24,32,.11)}
+.active-menu-banner:after{content:"";position:absolute;width:120px;height:120px;border-radius:50%;right:-48px;top:-54px;background:rgba(255,255,255,.28)}
+.active-menu-kicker{position:relative;z-index:1;display:flex;justify-content:space-between;gap:8px;font-size:.62rem;font-weight:900;letter-spacing:.08em;color:var(--muted)}.active-menu-kicker span{letter-spacing:0;text-transform:none;color:var(--brand)}
+.active-menu-banner h2{position:relative;z-index:1;font-family:Fraunces,serif;font-size:1.28rem;margin:4px 0 6px}.active-menu-meta{position:relative;z-index:1;display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-size:.72rem;font-weight:800}.active-menu-meta b{background:rgba(255,255,255,.62);padding:4px 8px;border-radius:999px}.active-menu-meta span{color:var(--muted)}
+.settings-stack{background:transparent!important;box-shadow:none!important;display:grid;gap:12px}.settings-panel{border:1px solid var(--line)!important;border-radius:18px!important;overflow:hidden;box-shadow:0 5px 16px rgba(20,24,32,.07);background:#fff}.settings-panel:last-child{border-bottom:1px solid var(--line)!important}.settings-panel[open]{box-shadow:0 9px 24px rgba(20,24,32,.10)}.settings-panel[open] summary{background:var(--brand-soft)}
+.choice-row{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:10px}.choice-chip{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:13px;padding:9px 6px;font-family:inherit;font-size:.72rem;font-weight:900}.choice-chip.on{background:var(--grad);color:var(--ink);border-color:transparent;box-shadow:0 4px 10px rgba(20,24,32,.08)}
+.auto-period{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--brand-soft);border-radius:13px;padding:9px 11px;margin:4px 0 7px;font-size:.72rem}.auto-period span{color:var(--muted);font-weight:800}.auto-period b{text-align:right;font-size:.74rem}.field label small{text-transform:none;letter-spacing:0;font-weight:700}
+
+
+:root,html[data-tint]{--shadow:0 8px 22px rgba(20,24,32,.10)}
+.week-tab,.day-chip{box-shadow:0 7px 18px rgba(20,24,32,.11),0 2px 4px rgba(20,24,32,.05)}.week-tab.on,.day-chip.on{box-shadow:0 8px 18px rgba(20,24,32,.13)}
+nav.tabbar ul{box-shadow:0 16px 36px rgba(20,24,32,.16)}nav.tabbar .blob{box-shadow:0 10px 22px rgba(20,24,32,.18),0 4px 10px rgba(20,24,32,.08),inset 0 3px 8px rgba(255,255,255,.55)}
+.course.open::before{box-shadow:0 8px 18px rgba(20,24,32,.07)}.tint-dot.on{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--brand),0 6px 14px rgba(20,24,32,.13)}
+header.top{align-items:flex-start;padding-bottom:20px;flex-wrap:wrap}.brand-block{min-width:0;flex:1}.brand-block h1{margin-bottom:10px}.menu-pick{max-width:100%;white-space:normal;text-align:left}.pill{max-width:100%;white-space:normal;box-shadow:0 6px 16px rgba(20,24,32,.12)}
+.active-menu-banner h2{margin:10px 0 14px;overflow-wrap:anywhere}.active-menu-banner .btn{position:relative;z-index:1;margin-top:14px}.active-menu-banner:after{pointer-events:none}
+.menu-select{flex:1;min-width:0;text-align:left;border:0;background:transparent;color:var(--ink);font:inherit;padding:10px;cursor:pointer}.menu-select b{display:block;overflow-wrap:anywhere;font-size:.88rem}.menu-select small{display:block;color:var(--brand);font-weight:800;margin-top:3px}.menu-manage-row.active{border:2px solid var(--brand)}.menu-manage-row .ico-btn{flex-shrink:0;margin-right:6px}.menu-manage-row{background:var(--bg)}
+button:focus-visible,summary:focus-visible{outline:2px solid var(--brand);outline-offset:3px}.btn:disabled{opacity:.6;cursor:wait}.tint-dot{box-shadow:inset 0 -1px 0 rgba(20,24,32,.06)}.cell-bar{box-shadow:0 -8px 24px rgba(20,24,32,.16)}
+.admin-report{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px;overflow-wrap:anywhere}.admin-report p{white-space:pre-wrap;font-size:.85rem}.admin-report small{color:var(--muted)}.admin-controls{display:flex;gap:8px;flex-wrap:wrap}.admin-controls .btn{flex:1}.admin-message{font-size:.8rem;overflow-wrap:anywhere}
+@media(max-width:360px){.compact-grid{grid-template-columns:1fr}.settings-panel summary{padding:11px 12px}.choice-row{grid-auto-flow:row;grid-template-columns:1fr 1fr}}
+`;
+    document.head.appendChild(st);
+  })();
+  (function installDayNavigation(){
+    var screen=document.getElementById("screen-oggi"), gesture=null, suppressClickUntil=0;
+    screen.style.touchAction="pan-y pinch-zoom";
+    screen.addEventListener("pointerdown",function(e){
+      if(!e.isPrimary || (e.pointerType==="mouse" && e.button!==0) ||
+        e.target.closest("button,a,input,textarea,select")) return;
+      gesture={id:e.pointerId,x:e.clientX,y:e.clientY};
+      screen.setPointerCapture(e.pointerId);
+    });
+    screen.addEventListener("pointerup",function(e){
+      if(!gesture || gesture.id!==e.pointerId) return;
+      var dx=e.clientX-gesture.x, dy=e.clientY-gesture.y;
+      gesture=null;
+      if(Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*1.5) return;
+      suppressClickUntil=Date.now()+400;
+      if(!currentMenu()) return;
+      todayOffset+=dx<0 ? 1 : -1;
+      renderOggi();
+      bind();
+    });
+    screen.addEventListener("pointercancel",function(){gesture=null;});
+    screen.addEventListener("lostpointercapture",function(){gesture=null;});
+    screen.addEventListener("click",function(e){
+      if(Date.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();}
+    },true);
+    var setTab=window.setTab;
+    window.setTab=function(name){
+      var target=document.getElementById("screen-"+name);
+      if(target && !target.classList.contains("active")){
+        if(name==="settimane"){closeCellBar();selectCurrentWeekday();renderSettimane();bind();}
+        if(name==="oggi"){todayOffset=0;renderOggi();bind();}
+      }
+      return setTab(name);
+    };
+  })();
   if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(function(){});
   applyTint(currentTintId());
   renderAll();
   syncOfficialMenus();
+  window.addEventListener("online",function(){renderCloudStatus();if(getCloudKey())syncCloud(true);});
+  window.addEventListener("offline",renderCloudStatus);
+  if(getCloudKey()) syncCloud(true);
 })();

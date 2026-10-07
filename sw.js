@@ -1,4 +1,4 @@
-const CACHE = "menu-app-v5";
+const CACHE = "menu-app-v8";
 const ASSETS = [
   "./index.html", "./app.js", "./manifest.json", "./data/menus.json",
   "./icon-192.png", "./icon-512.png",
@@ -20,7 +20,7 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 self.addEventListener("fetch", (e) => {
-  if (e.request.method !== "GET") return;
+  if (e.request.method !== "GET" || new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(fetch(e.request).then((res) => {
     if (res.ok && e.request.url.startsWith(self.location.origin)) {
       const copy = res.clone();
@@ -29,3 +29,4 @@ self.addEventListener("fetch", (e) => {
     return res;
   }).catch(() => caches.match(e.request)));
 });
+
