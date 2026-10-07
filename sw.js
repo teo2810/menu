@@ -1,4 +1,4 @@
-const CACHE = "menu-app-v7";
+const CACHE = "menu-app-v8";
 const ASSETS = [
   "./index.html", "./app.js", "./manifest.json", "./data/menus.json",
   "./icon-192.png", "./icon-512.png",
@@ -29,3 +29,4 @@ self.addEventListener("fetch", (e) => {
     return res;
   }).catch(() => caches.match(e.request)));
 });
+

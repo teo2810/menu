@@ -122,6 +122,8 @@
   }
   var lib = loadLibrary();
   var state = { menus:lib.menus, activeId:lib.activeId, week:0, day:"lunedi", edit:null };
+  var todayOffset = 0;
+  var weeklyContext = "";
   function saveLibrary(){
     localStorage.setItem(STORE, JSON.stringify({ menus:state.menus, activeId:state.activeId }));
     if (!cloudApplying && getCloudKey()) queueCloudSave();
@@ -330,6 +332,24 @@
     return "";
   }
 
+  function displayedDate(){
+    var date = new Date();
+    date.setHours(12,0,0,0);
+    date.setDate(date.getDate()+todayOffset);
+    return date;
+  }
+  function menuWeekForDate(menu,date){
+    var vis=filledWeekIdx(menu), calculated=weekIndexForDate(menu,date);
+    if(menu.cycle&&menu.cycle.mode==="single") return 0;
+    return vis.length===1 ? vis[0] : (vis.length ? (vis.indexOf(calculated)>=0?calculated:vis[calculated%vis.length]) : calculated);
+  }
+  function selectCurrentWeekday(){
+    var menu=currentMenu(), now=new Date();
+    state.week=menu ? menuWeekForDate(menu,now) : 0;
+    state.day=DAYS[(now.getDay()+6)%7 < 5 ? (now.getDay()+6)%7 : 0].id;
+    weeklyContext=state.activeId+":"+now.toDateString();
+  }
+
   function renderHeader(){
     var pick = document.getElementById("menuPick");
     if (!pick) return;
@@ -367,20 +387,20 @@
     var box = document.getElementById("screen-oggi");
     var m = currentMenu();
     if (!m) {box.innerHTML="<div class='meal-card empty'><h2>Nessun menu</h2><button class='btn btn-primary btn-wide' id=goImport>Importa il primo menu</button></div>";return;}
-    var now = new Date();
+    var now = displayedDate();
     var map = {1:"lunedi",2:"martedi",3:"mercoledi",4:"giovedi",5:"venerdi"};
     var dayId = map[now.getDay()];
-    var vis = filledWeekIdx(m);
-    var calculated=weekIndexForDate(m,now); var week=vis.length===1 ? vis[0] : (vis.length ? (vis.indexOf(calculated)>=0?calculated:vis[calculated%vis.length]) : calculated);
-    if(m.cycle&&m.cycle.mode==="single") week=0;
+    var week=menuWeekForDate(m,now);
     var nice = now.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"});
     var validity=validityText(m);
-    if(!menuIsValidOn(m,now)){ box.innerHTML="<div class=hero-today><div class=kicker>"+esc(m.name)+"</div><h2>"+nice+"</h2></div><div class='meal-card empty'><h2>Menu non attivo oggi</h2><p class=status>"+esc(validity||"Controlla il periodo di validità.")+"</p></div>"; return; }
-    box.innerHTML = "<div class=hero-today><div class=kicker>"+esc(m.name)+(validity?" · "+esc(validity):"")+"</div><h2>"+nice+"</h2></div>"+(dayId&&m.weeks[week]?mealHtml(m.weeks[week].days[dayId],week,dayId):"<div class=meal-card><p>Nessun menu previsto oggi.</p></div>");
+    var navigation="<p class=status>Scorri a sinistra per il giorno dopo, a destra per quello prima.</p>";
+    if(!menuIsValidOn(m,now)){ box.innerHTML="<div class=hero-today><div class=kicker>"+esc(m.name)+"</div><h2>"+nice+"</h2></div>"+navigation+"<div class='meal-card empty'><h2>Menu non attivo in questa data</h2><p class=status>"+esc(validity||"Controlla il periodo di validità.")+"</p></div>"; return; }
+    box.innerHTML = "<div class=hero-today><div class=kicker>"+esc(m.name)+(validity?" · "+esc(validity):"")+"</div><h2>"+nice+"</h2></div>"+navigation+(dayId&&m.weeks[week]?mealHtml(m.weeks[week].days[dayId],week,dayId):"<div class=meal-card><p>Nessun menu previsto in questa data.</p></div>");
   }
   function renderSettimane(){
     var box = document.getElementById("screen-settimane");
     var m = currentMenu();
+    if(weeklyContext!==state.activeId+":"+new Date().toDateString()) selectCurrentWeekday();
     if (!m) { box.innerHTML = "<div class=meal-card empty><h2>Nessun menu</h2><button class='btn btn-primary btn-wide' id=goImport>Importa il primo menu</button></div>"; return; }
     if (!m.weeks[state.week]) state.week=0;
     var vis = m.cycle&&m.cycle.mode==="single" ? [0] : m.weeks.map(function(w,i){return i;});
@@ -1662,6 +1682,41 @@ button:focus-visible,summary:focus-visible{outline:2px solid var(--brand);outlin
 @media(max-width:360px){.compact-grid{grid-template-columns:1fr}.settings-panel summary{padding:11px 12px}.choice-row{grid-auto-flow:row;grid-template-columns:1fr 1fr}}
 `;
     document.head.appendChild(st);
+  })();
+  (function installDayNavigation(){
+    var screen=document.getElementById("screen-oggi"), gesture=null, suppressClickUntil=0;
+    screen.style.touchAction="pan-y pinch-zoom";
+    screen.addEventListener("pointerdown",function(e){
+      if(!e.isPrimary || (e.pointerType==="mouse" && e.button!==0) ||
+        e.target.closest("button,a,input,textarea,select")) return;
+      gesture={id:e.pointerId,x:e.clientX,y:e.clientY};
+      screen.setPointerCapture(e.pointerId);
+    });
+    screen.addEventListener("pointerup",function(e){
+      if(!gesture || gesture.id!==e.pointerId) return;
+      var dx=e.clientX-gesture.x, dy=e.clientY-gesture.y;
+      gesture=null;
+      if(Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*1.5) return;
+      suppressClickUntil=Date.now()+400;
+      if(!currentMenu()) return;
+      todayOffset+=dx<0 ? 1 : -1;
+      renderOggi();
+      bind();
+    });
+    screen.addEventListener("pointercancel",function(){gesture=null;});
+    screen.addEventListener("lostpointercapture",function(){gesture=null;});
+    screen.addEventListener("click",function(e){
+      if(Date.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();}
+    },true);
+    var setTab=window.setTab;
+    window.setTab=function(name){
+      var target=document.getElementById("screen-"+name);
+      if(target && !target.classList.contains("active")){
+        if(name==="settimane"){closeCellBar();selectCurrentWeekday();renderSettimane();bind();}
+        if(name==="oggi"){todayOffset=0;renderOggi();bind();}
+      }
+      return setTab(name);
+    };
   })();
   if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(function(){});
   applyTint(currentTintId());
