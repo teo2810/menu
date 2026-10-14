@@ -8,14 +8,16 @@
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#EEF3F8" />
 <script>
 (function(){
-  var ok = {rosa:"#F6D4E0",cielo:"#D4E4F6",menta:"#D4F0E4",limone:"#F6F0D4",pesca:"#F6E0D4",corallo:"#F6D4DC"};
+  var ok = {rosa:"#EEF3F8",cielo:"#EEF3F8",menta:"#EEF8F4",limone:"#F6F4EE",pesca:"#F8F0EE",corallo:"#F8EEF0"};
   var id = "rosa";
   try { id = localStorage.getItem("menu-tint-v1") || "rosa"; } catch (e) {}
   if (!ok[id]) id = "rosa";
   document.documentElement.setAttribute("data-tint", id);
-  window.paintStatusBar = function(hex){
-    document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.content = "#EEF3F8"; });
-    document.documentElement.style.backgroundColor = "#EEF3F8";
+  window.paintStatusBar = function(){
+    var tint = document.documentElement.getAttribute("data-tint") || "rosa";
+    var edge = ok[tint] || ok.rosa;
+    document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.content = edge; });
+    document.documentElement.style.backgroundColor = edge;
   };
   window.paintStatusBar(ok[id]);
 })();
@@ -28,7 +30,7 @@
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="2026-10-14-system-edges" />
+<meta name="app-build" content="2026-10-14-halos-restored" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -128,21 +130,21 @@ html[data-tint="corallo"] {
 }
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html {
-  background-color:#EEF3F8;
+  background-color:var(--wash-tail);
   color-scheme: light only;
 }
 html,body {
   margin:0; height:100%; width:100%;
-  background-color:#EEF3F8;
+  background-color:var(--wash-tail);
 
 }
 body {
   font-family:Nunito,system-ui,sans-serif;
   color:var(--ink); overflow:hidden; isolation:isolate;
 }
-/* Decorative color fades out before both system bars. */
+/* Full color layer with a short transition into the native screen edges. */
 body::before {
-  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
   background-image:
     linear-gradient(180deg,var(--wash) 0px,var(--wash) 48px,var(--wash-mid) 90px,transparent 140px),
     radial-gradient(880px 480px at 8% 12%, var(--blob-a) 0%, transparent 56%),
@@ -150,10 +152,12 @@ body::before {
     radial-gradient(700px 420px at 80% 110%, var(--blob-c) 0%, transparent 58%),
     linear-gradient(180deg,var(--wash) 0%, var(--wash-end) 55%, var(--wash-tail) 100%);
 
-  -webkit-mask-image:linear-gradient(to bottom, transparent 0, transparent calc(100px + env(safe-area-inset-top,0px)), #000 35%, #000 65%, transparent calc(100% - 140px - env(safe-area-inset-bottom,0px)), transparent 100%);
-  mask-image:linear-gradient(to bottom, transparent 0, transparent calc(100px + env(safe-area-inset-top,0px)), #000 35%, #000 65%, transparent calc(100% - 140px - env(safe-area-inset-bottom,0px)), transparent 100%);
+  -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 calc(48px + env(safe-area-inset-top,0px)), #000 calc(100% - 64px - env(safe-area-inset-bottom,0px)), transparent calc(100% - 8px - env(safe-area-inset-bottom,0px)), transparent 100%);
+  mask-image:linear-gradient(to bottom, transparent 0, #000 calc(48px + env(safe-area-inset-top,0px)), #000 calc(100% - 64px - env(safe-area-inset-bottom,0px)), transparent calc(100% - 8px - env(safe-area-inset-bottom,0px)), transparent 100%);
 }
-.app { height:100vh; height:100dvh; min-height:0; display:flex; flex-direction:column; max-width:480px; margin:0 auto; position:relative; overflow:visible; }
+/* Stop the navigation shadow at the native gesture area. */
+body::after { content:""; position:fixed; bottom:0; left:0; right:0; height:calc(8px + var(--safe-b)); background:var(--wash-tail); z-index:31; pointer-events:none; }
+.app { z-index:1; height:100vh; height:100dvh; min-height:0; display:flex; flex-direction:column; max-width:480px; margin:0 auto; position:relative; overflow:visible; }
 header.top {
   padding:calc(14px + env(safe-area-inset-top,0px)) 18px 10px;
   display:flex; align-items:flex-end; justify-content:space-between; gap:12px;

@@ -1,4 +1,4 @@
-const CACHE = "menu-app-v10-system-edges";
+const CACHE = "menu-app-v11-halos-restored";
 const ASSETS = [
   "./index.html", "./app.js", "./manifest.json", "./data/menus.json",
   "./icon-192.png", "./icon-512.png",
