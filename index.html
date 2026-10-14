@@ -4,11 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light only" />
-<meta name="theme-color" content="#EEF3F8" />
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#EEF3F8" />
+<meta name="theme-color" content="#F6D4E0" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F6D4E0" />
 <script>
 (function(){
-  var ok = {rosa:"#EEF3F8",cielo:"#EEF3F8",menta:"#EEF8F4",limone:"#F6F4EE",pesca:"#F8F0EE",corallo:"#F8EEF0"};
+  var ok = {rosa:"#F6D4E0",cielo:"#D4E4F6",menta:"#D4F0E4",limone:"#F6F0D4",pesca:"#F6E0D4",corallo:"#F6D4DC",neutro:"#F5F6F8"};
   var id = "rosa";
   try { id = localStorage.getItem("menu-tint-v1") || "rosa"; } catch (e) {}
   if (!ok[id]) id = "rosa";
@@ -30,7 +30,7 @@
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="2026-10-14-halos-restored" />
+<meta name="app-build" content="2026-10-14-continuous-neutral" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -142,21 +142,27 @@ body {
   font-family:Nunito,system-ui,sans-serif;
   color:var(--ink); overflow:hidden; isolation:isolate;
 }
-/* Full color layer with a short transition into the native screen edges. */
-body::before {
-  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+/* One continuous canvas; safe-area padding belongs only to the controls. */
+html {
+  background-color:var(--wash);
   background-image:
     linear-gradient(180deg,var(--wash) 0px,var(--wash) 48px,var(--wash-mid) 90px,transparent 140px),
-    radial-gradient(880px 480px at 8% 12%, var(--blob-a) 0%, transparent 56%),
-    radial-gradient(800px 460px at 100% 8%, var(--blob-b) 0%, transparent 54%),
-    radial-gradient(700px 420px at 80% 110%, var(--blob-c) 0%, transparent 58%),
-    linear-gradient(180deg,var(--wash) 0%, var(--wash-end) 55%, var(--wash-tail) 100%);
-
-  -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 calc(48px + env(safe-area-inset-top,0px)), #000 calc(100% - 64px - env(safe-area-inset-bottom,0px)), transparent calc(100% - 8px - env(safe-area-inset-bottom,0px)), transparent 100%);
-  mask-image:linear-gradient(to bottom, transparent 0, #000 calc(48px + env(safe-area-inset-top,0px)), #000 calc(100% - 64px - env(safe-area-inset-bottom,0px)), transparent calc(100% - 8px - env(safe-area-inset-bottom,0px)), transparent 100%);
+    radial-gradient(880px 480px at 8% 12%,var(--blob-a) 0%,transparent 56%),
+    radial-gradient(800px 460px at 100% 8%,var(--blob-b) 0%,transparent 54%),
+    radial-gradient(700px 420px at 80% 110%,var(--blob-c) 0%,transparent 58%),
+    linear-gradient(180deg,var(--wash) 0%,var(--wash-end) 55%,var(--wash-tail) 100%);
+  background-size:100% 100%; background-repeat:no-repeat; background-attachment:fixed;
 }
-/* Stop the navigation shadow at the native gesture area. */
-body::after { content:""; position:fixed; bottom:0; left:0; right:0; height:calc(8px + var(--safe-b)); background:var(--wash-tail); z-index:31; pointer-events:none; }
+body { background:transparent; }
+html[data-tint="neutro"] {
+  --wash:#F5F6F8; --wash-tail:#F5F6F8; --bg:#F5F6F8; --bg2:#F5F6F8;
+  --brand:var(--selection-ink,#75649A); --brand-soft:var(--selection-soft,#F0EAF9);
+  --grad:var(--selection-grad,linear-gradient(135deg,#E7DAF7,#F7DDE9));
+  --line:#E6E7EC; background-image:none;
+}
+html[data-tint="neutro"] .hero-today,
+html[data-tint="neutro"] .active-menu-banner { background:transparent; box-shadow:none; }
+html[data-tint="neutro"] .active-menu-banner::after { display:none; }
 .app { z-index:1; height:100vh; height:100dvh; min-height:0; display:flex; flex-direction:column; max-width:480px; margin:0 auto; position:relative; overflow:visible; }
 header.top {
   padding:calc(14px + env(safe-area-inset-top,0px)) 18px 10px;
@@ -590,6 +596,18 @@ header.top { flex-shrink:0; }
 <script>
 (function(){
   var list = document.getElementById("tabList");
+  window.applySelectionTint = function(name){
+    var accents = {
+      oggi:{soft:"#F0EAF9",ink:"#75649A",grad:"linear-gradient(135deg,#E7DAF7,#F7DDE9)"},
+      settimane:{soft:"#E7F1FC",ink:"#587B9E",grad:"linear-gradient(135deg,#D8E8FA,#DDF2F8)"},
+      importa:{soft:"#E5F5ED",ink:"#4E8670",grad:"linear-gradient(135deg,#D7F0E1,#E5F4D9)"},
+      info:{soft:"#FFF0E4",ink:"#A07551",grad:"linear-gradient(135deg,#F9E2CC,#F6EDD2)"}
+    };
+    var a=accents[name]||accents.oggi, root=document.documentElement;
+    root.style.setProperty("--selection-soft",a.soft);
+    root.style.setProperty("--selection-ink",a.ink);
+    root.style.setProperty("--selection-grad",a.grad);
+  };
   var TAB_THEME = { bg:"var(--grad)", ink:"#2E1A47" };
   function place(){
     var on = list.querySelector("li.on");
@@ -601,6 +619,7 @@ header.top { flex-shrink:0; }
     blob.style.left = Math.max(28, Math.min(s.width - 28, (r.left + r.width / 2) - s.left)) + "px";
   }
   window.setTab = function(name){
+    window.applySelectionTint(name);
     document.querySelectorAll(".screen").forEach(function(el){ el.classList.toggle("active", el.id === "screen-" + name); });
     Array.prototype.forEach.call(list.children, function(li){
       var sel = li.dataset.tab === name;

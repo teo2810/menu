@@ -456,6 +456,7 @@
     if (libFile) libFile.onchange = function(e){ handleLibraryPick(e.target.files[0]); e.target.value = ""; };
   }
   var TINTS = [
+    { id:"neutro", name:"Neutro", swatch:"linear-gradient(135deg,#E7DAF7 0%,#D8E8FA 33%,#D7F0E1 66%,#F9E2CC 100%)", theme:"#F5F6F8" },
     { id:"rosa", name:"Rosa", swatch:"#F6D4E0", theme:"#F6D4E0" },
     { id:"cielo", name:"Cielo", swatch:"#A9C4E4", theme:"#D4E4F6" },
     { id:"menta", name:"Menta", swatch:"#B5E4C8", theme:"#D4F0E4" },
@@ -472,10 +473,12 @@
   function applyTint(id){
     var pack = null;
     for (var i=0;i<TINTS.length;i++) if (TINTS[i].id === id) pack = TINTS[i];
-    if (!pack) pack = TINTS[0];
+    if (!pack) pack = TINTS.find(function(t){return t.id==="rosa";});
     document.documentElement.setAttribute("data-tint", pack.id);
     try { localStorage.setItem("menu-tint-v1", pack.id); } catch (e) {}
     if (window.paintStatusBar) window.paintStatusBar(pack.theme);
+    var activeScreen=document.querySelector(".screen.active");
+    if(window.applySelectionTint) window.applySelectionTint(activeScreen ? activeScreen.id.replace("screen-","") : "oggi");
     var blob = document.getElementById("tabBlob");
     if (blob) blob.style.background = "var(--grad)";
     var lab = document.getElementById("tintName");
