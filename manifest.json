@@ -4,13 +4,28 @@
   "description": "Importa menù da foto o file, dai un nome, consulta e correggi",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#F6D4E0",
-  "theme_color": "#F6D4E0",
+  "background_color": "#EEF3F8",
+  "theme_color": "#EEF3F8",
   "lang": "it",
   "orientation": "portrait",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

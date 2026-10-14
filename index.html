@@ -2,10 +2,10 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light only" />
-<meta name="theme-color" content="#F6D4E0" />
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F6D4E0" />
+<meta name="theme-color" content="#EEF3F8" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#EEF3F8" />
 <script>
 (function(){
   var ok = {rosa:"#F6D4E0",cielo:"#D4E4F6",menta:"#D4F0E4",limone:"#F6F0D4",pesca:"#F6E0D4",corallo:"#F6D4DC"};
@@ -14,8 +14,8 @@
   if (!ok[id]) id = "rosa";
   document.documentElement.setAttribute("data-tint", id);
   window.paintStatusBar = function(hex){
-    document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.content = hex; });
-    document.documentElement.style.backgroundColor = hex;
+    document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.content = "#EEF3F8"; });
+    document.documentElement.style.backgroundColor = "#EEF3F8";
   };
   window.paintStatusBar(ok[id]);
 })();
@@ -128,12 +128,12 @@ html[data-tint="corallo"] {
 }
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html {
-  background-color:var(--wash);
+  background-color:#EEF3F8;
   color-scheme: light only;
 }
 html,body {
-  margin:0; height:100%;
-  background-color:var(--wash);
+  margin:0; height:100%; width:100%;
+  background-color:#EEF3F8;
   background-image:
     linear-gradient(180deg,var(--wash) 0px,var(--wash) 48px,var(--wash-mid) 90px,transparent 140px),
     radial-gradient(880px 480px at 8% 12%, var(--blob-a) 0%, transparent 56%),
@@ -146,7 +146,7 @@ body {
   font-family:Nunito,system-ui,sans-serif;
   color:var(--ink); overflow:hidden;
 }
-.app { height:100dvh; display:flex; flex-direction:column; max-width:480px; margin:0 auto; position:relative; overflow:visible; }
+.app { height:100vh; height:100dvh; min-height:0; display:flex; flex-direction:column; max-width:480px; margin:0 auto; position:relative; overflow:visible; }
 header.top {
   padding:calc(14px + env(safe-area-inset-top,0px)) 18px 10px;
   display:flex; align-items:flex-end; justify-content:space-between; gap:12px;
@@ -180,7 +180,7 @@ header.top {
   padding:6px 12px; font-size:.72rem; font-weight:800; color:var(--brand);
   box-shadow:0 6px 16px rgba(46,26,71,.12); white-space:nowrap;
 }
-main { flex:1; overflow:auto; padding:6px 16px calc(var(--nav-h) + var(--safe-b) + 18px); }
+main { flex:1 1 0; min-height:0; min-width:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior-y:contain; -webkit-overflow-scrolling:touch; scroll-padding-bottom:calc(var(--nav-h) + var(--safe-b) + 18px); padding:6px 16px calc(var(--nav-h) + var(--safe-b) + 18px); }
 .screen { display:none; animation:rise .35s ease; }
 .screen.active { display:block; }
 @keyframes rise { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:none;} }
@@ -351,7 +351,7 @@ textarea { min-height:140px; resize:vertical; }
 .progress > i { display:block; height:100%; width:0; background:var(--grad); transition:width .2s; }
 .status { font-size:.8rem; font-weight:800; color:var(--muted); }
 nav.tabbar {
-  position:fixed; left:50%; transform:translateX(-50%);
+  position:absolute; left:50%; transform:translateX(-50%);
   bottom:calc(8px + var(--safe-b));
   width:min(440px, calc(100% - 22px));
   height:92px; background:transparent; z-index:30;
@@ -484,6 +484,22 @@ select:not(.menu-pick) {
 #importa-compact .meal-card { padding:14px; }
 #importa-compact .field { margin:6px 0; }
 
+/* Keep the scroll viewport bounded on Safari and allow long labels to wrap. */
+header.top { flex-shrink:0; }
+.screen, .meal-card, .field, .course > div { min-width:0; }
+.course .ico { flex-shrink:0; }
+.course .dish, .hero-today .kicker, .status { overflow-wrap:anywhere; }
+.sheet { max-height:calc(100dvh - env(safe-area-inset-top, 0px) - 16px); overscroll-behavior:contain; }
+@media (max-width:480px) {
+  header.top { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right)); }
+  header.top .pill { justify-self:start; font-size:.68rem; }
+  .menu-pick { width:100%; padding-right:24px; }
+  input, select, textarea, .panel-body input, .panel-body select, .panel-body textarea { font-size:16px; }
+}
+@media (max-height:500px) and (orientation:landscape) {
+  header.top { padding-top:8px; padding-bottom:8px; }
+  .brand-block h1 { display:none; }
+}
 </style>
 </head>
 <body>
@@ -612,3 +628,4 @@ select:not(.menu-pick) {
 <script src="app.js"></script>
 </body>
 </html>
+
