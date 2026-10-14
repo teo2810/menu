@@ -1,4 +1,4 @@
-const CACHE = "menu-app-v9-mobile-asilo";
+const CACHE = "menu-app-v10-system-edges";
 const ASSETS = [
   "./index.html", "./app.js", "./manifest.json", "./data/menus.json",
   "./icon-192.png", "./icon-512.png",

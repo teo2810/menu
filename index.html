@@ -28,7 +28,7 @@
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="" />
+<meta name="app-build" content="2026-10-14-system-edges" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -134,17 +134,24 @@ html {
 html,body {
   margin:0; height:100%; width:100%;
   background-color:#EEF3F8;
+
+}
+body {
+  font-family:Nunito,system-ui,sans-serif;
+  color:var(--ink); overflow:hidden; isolation:isolate;
+}
+/* Decorative color fades out before both system bars. */
+body::before {
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
   background-image:
     linear-gradient(180deg,var(--wash) 0px,var(--wash) 48px,var(--wash-mid) 90px,transparent 140px),
     radial-gradient(880px 480px at 8% 12%, var(--blob-a) 0%, transparent 56%),
     radial-gradient(800px 460px at 100% 8%, var(--blob-b) 0%, transparent 54%),
     radial-gradient(700px 420px at 80% 110%, var(--blob-c) 0%, transparent 58%),
     linear-gradient(180deg,var(--wash) 0%, var(--wash-end) 55%, var(--wash-tail) 100%);
-  background-attachment:fixed;
-}
-body {
-  font-family:Nunito,system-ui,sans-serif;
-  color:var(--ink); overflow:hidden;
+
+  -webkit-mask-image:linear-gradient(to bottom, transparent 0, transparent calc(100px + env(safe-area-inset-top,0px)), #000 35%, #000 65%, transparent calc(100% - 140px - env(safe-area-inset-bottom,0px)), transparent 100%);
+  mask-image:linear-gradient(to bottom, transparent 0, transparent calc(100px + env(safe-area-inset-top,0px)), #000 35%, #000 65%, transparent calc(100% - 140px - env(safe-area-inset-bottom,0px)), transparent 100%);
 }
 .app { height:100vh; height:100dvh; min-height:0; display:flex; flex-direction:column; max-width:480px; margin:0 auto; position:relative; overflow:visible; }
 header.top {
