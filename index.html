@@ -4,8 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light only" />
-<meta name="theme-color" content="#F6D4E0" />
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F6D4E0" />
+<meta name="theme-color" content="#FFFFFF" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF" />
 <script>
 (function(){
   var ok = {rosa:"#F6D4E0",cielo:"#D4E4F6",menta:"#D4F0E4",limone:"#F6F0D4",pesca:"#F6E0D4",corallo:"#F6D4DC",neutro:"#F5F6F8"};
@@ -14,8 +14,7 @@
   if (!ok[id]) id = "rosa";
   document.documentElement.setAttribute("data-tint", id);
   window.paintStatusBar = function(){
-    var tint = document.documentElement.getAttribute("data-tint") || "rosa";
-    var edge = ok[tint] || ok.rosa;
+    var edge = "#FFFFFF";
     document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.content = edge; });
     document.documentElement.style.backgroundColor = edge;
   };
@@ -30,7 +29,7 @@
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="2026-10-16-menus-edges" />
+<meta name="app-build" content="2026-10-16-full-width-nav" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -142,14 +141,13 @@ body {
   font-family:Nunito,system-ui,sans-serif;
   color:var(--ink); overflow:hidden; isolation:isolate;
 }
-/* Native bars use one theme color. Both canvas edges meet that exact color;
-   the interior retains the personalized halos, independently of scroll height. */
-html { background:var(--wash); overflow:hidden; }
+/* White native bars meet the header fade and the full-width bottom dock. */
+html { background:#fff; overflow:hidden; }
 body::before {
   content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
   background-color:var(--wash);
   background-image:
-    linear-gradient(180deg,var(--wash) 0px,var(--wash) 48px,transparent 140px,transparent calc(100% - 160px),var(--wash) calc(100% - 32px),var(--wash) 100%),
+    linear-gradient(180deg,#fff 0px,#fff 32px,transparent 150px),
     radial-gradient(880px 480px at 8% 12%,var(--blob-a) 0%,transparent 56%),
     radial-gradient(800px 460px at 100% 8%,var(--blob-b) 0%,transparent 54%),
     radial-gradient(700px 420px at 80% 110%,var(--blob-c) 0%,transparent 58%),
@@ -163,7 +161,7 @@ html[data-tint="neutro"] {
   --grad:var(--selection-grad,linear-gradient(135deg,#E7DAF7,#F7DDE9));
   --line:#E6E7EC; background-image:none;
 }
-html[data-tint="neutro"] body::before { background:var(--wash); }
+html[data-tint="neutro"] body::before { background:linear-gradient(180deg,#fff 32px,var(--wash) 150px); }
 html[data-tint="neutro"] .hero-today,
 html[data-tint="neutro"] .active-menu-banner { background:transparent; box-shadow:none; }
 html[data-tint="neutro"] .active-menu-banner::after { display:none; }
@@ -372,20 +370,23 @@ textarea { min-height:140px; resize:vertical; }
 .progress > i { display:block; height:100%; width:0; background:var(--grad); transition:width .2s; }
 .status { font-size:.8rem; font-weight:800; color:var(--muted); }
 nav.tabbar {
-  position:absolute; left:50%; transform:translateX(-50%);
-  bottom:calc(8px + var(--safe-b));
-  width:min(440px, calc(100% - 22px));
-  height:92px; background:transparent; z-index:30;
+  position:fixed; left:0; right:0; bottom:0;
+  width:100%; height:calc(92px + var(--safe-b));
+  padding:0 max(8px,env(safe-area-inset-right,0px)) var(--safe-b) max(8px,env(safe-area-inset-left,0px));
+  background:transparent; z-index:30;
   overflow:visible; pointer-events:none;
 }
-.tab-stage { position:relative; height:92px; overflow:visible; }
+nav.tabbar::before {
+  content:""; position:absolute; inset:28px 0 0;
+  background:#fff; border-radius:22px 22px 0 0;
+  box-shadow:0 -6px 24px rgba(20,24,32,.08);
+}
+.tab-stage { position:relative; width:100%; max-width:480px; margin:0 auto; height:92px; overflow:visible; }
 nav.tabbar ul {
   list-style:none; margin:0; padding:0;
   position:absolute; left:0; right:0; bottom:0; height:64px;
   display:grid; grid-template-columns:repeat(4,1fr);
-  background:#fff;
-  border-radius:32px;
-  box-shadow:0 16px 36px rgba(70,45,100,.2);
+  background:transparent; border-radius:0; box-shadow:none;
   pointer-events:auto; overflow:visible;
 }
 nav.tabbar .blob {

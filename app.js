@@ -1733,7 +1733,7 @@
 
 :root,html[data-tint]{--shadow:0 8px 22px rgba(20,24,32,.10)}
 .week-tab,.day-chip{box-shadow:0 7px 18px rgba(20,24,32,.11),0 2px 4px rgba(20,24,32,.05)}.week-tab.on,.day-chip.on{box-shadow:0 8px 18px rgba(20,24,32,.13)}
-nav.tabbar ul{box-shadow:0 16px 36px rgba(20,24,32,.16)}nav.tabbar .blob{box-shadow:0 10px 22px rgba(20,24,32,.18),0 4px 10px rgba(20,24,32,.08),inset 0 3px 8px rgba(255,255,255,.55)}
+nav.tabbar ul{box-shadow:none}nav.tabbar .blob{box-shadow:0 10px 22px rgba(20,24,32,.18),0 4px 10px rgba(20,24,32,.08),inset 0 3px 8px rgba(255,255,255,.55)}
 .course.open::before{box-shadow:0 8px 18px rgba(20,24,32,.07)}.tint-dot.on{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--brand),0 6px 14px rgba(20,24,32,.13)}
 header.top{align-items:flex-start;padding-bottom:14px;flex-wrap:wrap}.brand-block{min-width:0;flex:1}.brand-block h1{margin-bottom:10px}.menu-pick{max-width:100%;white-space:normal;text-align:left}.pill{max-width:100%;white-space:normal;box-shadow:0 6px 16px rgba(20,24,32,.12)}
 .active-menu-banner h2{margin:10px 0 14px;overflow-wrap:anywhere}.active-menu-banner .btn{position:relative;z-index:1;margin-top:14px}.active-menu-banner:after{pointer-events:none}
