@@ -30,7 +30,7 @@
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Menu</title>
-<meta name="app-build" content="2026-10-14-continuous-neutral" />
+<meta name="app-build" content="2026-10-16-menus-edges" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
 <style>
@@ -142,16 +142,19 @@ body {
   font-family:Nunito,system-ui,sans-serif;
   color:var(--ink); overflow:hidden; isolation:isolate;
 }
-/* One continuous canvas; safe-area padding belongs only to the controls. */
-html {
+/* Native bars use one theme color. Both canvas edges meet that exact color;
+   the interior retains the personalized halos, independently of scroll height. */
+html { background:var(--wash); overflow:hidden; }
+body::before {
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
   background-color:var(--wash);
   background-image:
-    linear-gradient(180deg,var(--wash) 0px,var(--wash) 48px,var(--wash-mid) 90px,transparent 140px),
+    linear-gradient(180deg,var(--wash) 0px,var(--wash) 48px,transparent 140px,transparent calc(100% - 160px),var(--wash) calc(100% - 32px),var(--wash) 100%),
     radial-gradient(880px 480px at 8% 12%,var(--blob-a) 0%,transparent 56%),
     radial-gradient(800px 460px at 100% 8%,var(--blob-b) 0%,transparent 54%),
     radial-gradient(700px 420px at 80% 110%,var(--blob-c) 0%,transparent 58%),
     linear-gradient(180deg,var(--wash) 0%,var(--wash-end) 55%,var(--wash-tail) 100%);
-  background-size:100% 100%; background-repeat:no-repeat; background-attachment:fixed;
+  background-size:100% 100%; background-repeat:no-repeat;
 }
 body { background:transparent; }
 html[data-tint="neutro"] {
@@ -160,6 +163,7 @@ html[data-tint="neutro"] {
   --grad:var(--selection-grad,linear-gradient(135deg,#E7DAF7,#F7DDE9));
   --line:#E6E7EC; background-image:none;
 }
+html[data-tint="neutro"] body::before { background:var(--wash); }
 html[data-tint="neutro"] .hero-today,
 html[data-tint="neutro"] .active-menu-banner { background:transparent; box-shadow:none; }
 html[data-tint="neutro"] .active-menu-banner::after { display:none; }
@@ -197,7 +201,7 @@ header.top {
   padding:6px 12px; font-size:.72rem; font-weight:800; color:var(--brand);
   box-shadow:0 6px 16px rgba(46,26,71,.12); white-space:nowrap;
 }
-main { flex:1 1 0; min-height:0; min-width:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior-y:contain; -webkit-overflow-scrolling:touch; scroll-padding-bottom:calc(var(--nav-h) + var(--safe-b) + 18px); padding:6px 16px calc(var(--nav-h) + var(--safe-b) + 18px); }
+main { flex:1 1 0; min-height:0; min-width:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior-y:contain; -webkit-overflow-scrolling:touch; scroll-padding-bottom:calc(var(--nav-h) + var(--safe-b) + 32px); padding:6px 16px calc(var(--nav-h) + var(--safe-b) + 32px); }
 .screen { display:none; animation:rise .35s ease; }
 .screen.active { display:block; }
 @keyframes rise { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:none;} }

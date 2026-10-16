@@ -1,4 +1,636 @@
 {
-  "version": 1,
-  "menus": []
+  "version": 2,
+  "menus": [
+    {
+      "id": "menu-1790182232946",
+      "name": "MENU ESTIVO",
+      "period": "dal 01/04 al 30/09",
+      "weeks": [
+        {
+          "name": "Prima settimana",
+          "days": {
+            "lunedi": {
+              "primo": "CREMA DI CAROTE CON FARRO",
+              "primoA": "1,14",
+              "secondo": "COSCE POLLO AL FORNO",
+              "secondoA": "",
+              "contorno": "POMODORI",
+              "contornoA": "15",
+              "frutta": "MELA",
+              "fruttaA": "",
+              "merenda": "PANE E BANANA CON SPOLVERATA DI CACAO AMARO",
+              "merendaA": "1"
+            },
+            "martedi": {
+              "primo": "PASTA AL PESTO",
+              "primoA": "1,8,16",
+              "secondo": "FRITTATA AL FORNO",
+              "secondoA": "3",
+              "contorno": "INSALATA",
+              "contornoA": "",
+              "frutta": "PERA",
+              "fruttaA": "",
+              "merenda": "PANE E MARMELLATA",
+              "merendaA": "1"
+            },
+            "mercoledi": {
+              "primo": "PIZZA AL POMODORO E MOZZARELLA",
+              "primoA": "1,7,15,16",
+              "secondo": "",
+              "secondoA": "",
+              "contorno": "CAROTE CRUDE",
+              "contornoA": "",
+              "frutta": "PESCA",
+              "fruttaA": "",
+              "merenda": "FRUTTA CON CREAKERS",
+              "merendaA": "1"
+            },
+            "giovedi": {
+              "primo": "PASTA AL POMODORO",
+              "primoA": "1,15",
+              "secondo": "FAGIOLI",
+              "secondoA": "",
+              "contorno": "ZUCCHINE COTTE",
+              "contornoA": "",
+              "frutta": "BANANA",
+              "fruttaA": "",
+              "merenda": "YOGURT BIANCO INTERO CON FRUTTA",
+              "merendaA": "7"
+            },
+            "venerdi": {
+              "primo": "RISOTTO ALLO ZAFFERANO",
+              "primoA": "14",
+              "secondo": "FILETTO DI PLATESSA GRATINATA",
+              "secondoA": "1,4",
+              "contorno": "FAGIOLINI",
+              "contornoA": "",
+              "frutta": "ALBICOCCHE",
+              "fruttaA": "",
+              "merenda": "SPREMUTA CON BISCOTTI SECCHI",
+              "merendaA": "1,3,6,7"
+            }
+          }
+        },
+        {
+          "name": "Seconda settimana",
+          "days": {
+            "lunedi": {
+              "primo": "CREMA DI LENTICCHIE CON CROSTINI",
+              "primoA": "14,15",
+              "secondo": "PATATE AL FORNO",
+              "secondoA": "",
+              "contorno": "CAROTE CRUDE",
+              "contornoA": "",
+              "frutta": "PESCA",
+              "fruttaA": "",
+              "merenda": "PANE E MARMELLATA",
+              "merendaA": "1"
+            },
+            "martedi": {
+              "primo": "COUS COUS CON VERDURE",
+              "primoA": "1,14,15",
+              "secondo": "BOCCONCINI DI POLLO",
+              "secondoA": "",
+              "contorno": "INSALATA",
+              "contornoA": "",
+              "frutta": "BANANA",
+              "fruttaA": "",
+              "merenda": "YOGURT BIANCO INTERO CON FRUTTA",
+              "merendaA": "7"
+            },
+            "mercoledi": {
+              "primo": "RISOTTO BIANCO CON ZUCCHINE E PISELLI",
+              "primoA": "14",
+              "secondo": "FRITTATA AL FORNO",
+              "secondoA": "3",
+              "contorno": "POMODORI",
+              "contornoA": "15",
+              "frutta": "PRUGNE",
+              "fruttaA": "",
+              "merenda": "SPREMUTA CON BISCOTTI SECCHI",
+              "merendaA": "1,3,6,7"
+            },
+            "giovedi": {
+              "primo": "Pasta pasticciata al ragù",
+              "primoA": "1,14,15,16",
+              "secondo": "",
+              "secondoA": "",
+              "contorno": "INSALATA",
+              "contornoA": "",
+              "frutta": "ALBICOCCHE",
+              "fruttaA": "",
+              "merenda": "CROSTATA ALLA MARMELLATA",
+              "merendaA": "1,3,7"
+            },
+            "venerdi": {
+              "primo": "PASTA CON LE ZUCCHINE",
+              "primoA": "1",
+              "secondo": "FILETTO DI MERLUZZO GRATINATO",
+              "secondoA": "1,4",
+              "contorno": "CAROTE COTTE",
+              "contornoA": "",
+              "frutta": "PESCA",
+              "fruttaA": "",
+              "merenda": "FRUTTA BISCOTTI SECCHI",
+              "merendaA": "1,3,6,7"
+            }
+          }
+        },
+        {
+          "name": "Terza settimana",
+          "days": {
+            "lunedi": {
+              "primo": "PASTA AL PESTO",
+              "primoA": "1,8,16",
+              "secondo": "FAGIOLI ALL'UCCELLETTO",
+              "secondoA": "14,15",
+              "contorno": "INSALATA",
+              "contornoA": "",
+              "frutta": "MELA",
+              "fruttaA": "",
+              "merenda": "YOGURT BIANCO INTERO CON FRUTTA",
+              "merendaA": "7"
+            },
+            "martedi": {
+              "primo": "RISOTTO CON VERDURE E PISELLI",
+              "primoA": "14,15",
+              "secondo": "FILETTO DI MERLUZZO GRATINATO",
+              "secondoA": "1,4",
+              "contorno": "FAGIOLINI",
+              "contornoA": "",
+              "frutta": "ANGURIA",
+              "fruttaA": "",
+              "merenda": "PANE CON CIOCCOLATO FONDENTE",
+              "merendaA": "1"
+            },
+            "mercoledi": {
+              "primo": "PIZZA AL POMODORO E MOZZARELLA",
+              "primoA": "1,7,15,16",
+              "secondo": "",
+              "secondoA": "",
+              "contorno": "CAROTE CRUDE",
+              "contornoA": "",
+              "frutta": "PRUGNE",
+              "fruttaA": "",
+              "merenda": "SPREMUTA CON BISCOTTI SECCHI",
+              "merendaA": "1,3,6,7"
+            },
+            "giovedi": {
+              "primo": "CREMA DI VERDURA CON ORZO",
+              "primoA": "1,14,15",
+              "secondo": "PETTO DI POLLO ALLA SALVIA",
+              "secondoA": "1",
+              "contorno": "POMODORI",
+              "contornoA": "15",
+              "frutta": "PESCA",
+              "fruttaA": "",
+              "merenda": "PANE E BANANA CON SPOLVERATA DI CACAO AMARO",
+              "merendaA": "1"
+            },
+            "venerdi": {
+              "primo": "PASTA INTEGRALE AL POMODORO",
+              "primoA": "1,15",
+              "secondo": "FRITTATA AL FORNO",
+              "secondoA": "3",
+              "contorno": "ZUCCHINE COTTE",
+              "contornoA": "",
+              "frutta": "ALBICOCCHE",
+              "fruttaA": "",
+              "merenda": "PANE E MARMELLATA",
+              "merendaA": "1"
+            }
+          }
+        },
+        {
+          "name": "Quarta settimana",
+          "days": {
+            "lunedi": {
+              "primo": "PASTINA IN BRODO VEGETALE",
+              "primoA": "1,14",
+              "secondo": "FESA DI TACCHINO GRATINATA",
+              "secondoA": "1",
+              "contorno": "INSALATA",
+              "contornoA": "",
+              "frutta": "MELONE",
+              "fruttaA": "",
+              "merenda": "YOGURT BIANCO INTERO CON FRUTTA",
+              "merendaA": "7"
+            },
+            "martedi": {
+              "primo": "PASTA PASTICCIATA AL PESTO",
+              "primoA": "1,8,16",
+              "secondo": "FAGIOLI E CECI IN UMIDO",
+              "secondoA": "14,15",
+              "contorno": "POMODORI",
+              "contornoA": "15",
+              "frutta": "BANANA",
+              "fruttaA": "",
+              "merenda": "SPREMUTA CON BISCOTTI SECCHI",
+              "merendaA": "1,3,6,7"
+            },
+            "mercoledi": {
+              "primo": "RISOTTO ALLO ZAFFERANO",
+              "primoA": "14",
+              "secondo": "MOZZARELLA",
+              "secondoA": "7",
+              "contorno": "CAROTE CRUDE",
+              "contornoA": "",
+              "frutta": "PRUGNE",
+              "fruttaA": "",
+              "merenda": "YOGURT E CEREALI",
+              "merendaA": "7,1"
+            },
+            "giovedi": {
+              "primo": "PASTA AL POMODORO",
+              "primoA": "1,15",
+              "secondo": "PROSCIUTTO COTTO",
+              "secondoA": "",
+              "contorno": "ZUCCHINE COTTE",
+              "contornoA": "",
+              "frutta": "ALBICOCCHE",
+              "fruttaA": "",
+              "merenda": "FRUTTA CON CREAKERS",
+              "merendaA": "1"
+            },
+            "venerdi": {
+              "primo": "INSALATA DI FARRO POMODORINI/PISELLI",
+              "primoA": "1,15",
+              "secondo": "FILETTO PLATESSA GRATINATA",
+              "secondoA": "1,4",
+              "contorno": "FAGIOLINI",
+              "contornoA": "",
+              "frutta": "PESCA",
+              "fruttaA": "",
+              "merenda": "PANE E MARMELLATA",
+              "merendaA": "1"
+            }
+          }
+        }
+      ],
+      "type": "school",
+      "validFrom": "2026-04-01",
+      "validTo": "2026-09-30",
+      "sections": [
+        {
+          "id": "primo",
+          "label": "Primo"
+        },
+        {
+          "id": "secondo",
+          "label": "Secondo"
+        },
+        {
+          "id": "contorno",
+          "label": "Contorno"
+        },
+        {
+          "id": "frutta",
+          "label": "Frutta"
+        },
+        {
+          "id": "merenda",
+          "label": "Merenda"
+        }
+      ],
+      "cycle": {
+        "mode": "weekly",
+        "weeks": 4
+      },
+      "allergenLabels": {
+        "1": "Glutine",
+        "2": "Crostacei",
+        "3": "Uova",
+        "4": "Pesce",
+        "5": "Arachidi",
+        "6": "Soia",
+        "7": "Latte e prodotti a base di latte",
+        "8": "Frutta a guscio",
+        "9": "Molluschi",
+        "10": "Lupini",
+        "11": "Anidride solforosa",
+        "12": "Semi di sesamo",
+        "13": "Senape",
+        "14": "Sedano",
+        "15": "Pomodoro",
+        "16": "Formaggio"
+      },
+      "_asiloRevision": 2
+    },
+    {
+      "id": "menu-1791129912642",
+      "name": "MENU INVERNALE",
+      "period": "01/10-31/03",
+      "weeks": [
+        {
+          "name": "Prima",
+          "days": {
+            "lunedi": {
+              "primo": "Risotto alla paesana",
+              "primoA": "14,15",
+              "secondo": "Fagioli all'uccelletto",
+              "secondoA": "14,15",
+              "contorno": "Carote cotte",
+              "contornoA": "",
+              "frutta": "Mela",
+              "fruttaA": "",
+              "merenda": "Pane e marmellata",
+              "merendaA": "1"
+            },
+            "martedi": {
+              "primo": "Pasta con i cavolfiori",
+              "primoA": "1",
+              "secondo": "Frittata al forno",
+              "secondoA": "3",
+              "contorno": "Finocchi al velo crudi",
+              "contornoA": "",
+              "frutta": "Banana",
+              "fruttaA": "",
+              "merenda": "Crackers e 1/2 banana",
+              "merendaA": "1"
+            },
+            "mercoledi": {
+              "primo": "Crema di verdure con farro",
+              "primoA": "1,14,15",
+              "secondo": "Cosce di pollo al forno",
+              "secondoA": "",
+              "contorno": "Spinaci",
+              "contornoA": "",
+              "frutta": "Pere",
+              "fruttaA": "",
+              "merenda": "Yogurt int bianco frutto",
+              "merendaA": "7"
+            },
+            "giovedi": {
+              "primo": "Pizza al pomodoro e mozzarella",
+              "primoA": "1,7,15,16",
+              "secondo": "",
+              "secondoA": "",
+              "contorno": "Carote crude",
+              "contornoA": "",
+              "frutta": "Mela",
+              "fruttaA": "",
+              "merenda": "Pane con cioccolato fondente",
+              "merendaA": "1"
+            },
+            "venerdi": {
+              "primo": "Pasta al pomodoro",
+              "primoA": "1,15",
+              "secondo": "Filetto di merluzzo gratinato",
+              "secondoA": "1,4",
+              "contorno": "Insalata",
+              "contornoA": "",
+              "frutta": "Banana",
+              "fruttaA": "",
+              "merenda": "Un bicchiere di spremuta di arancia e biscotti secchi",
+              "merendaA": "1,3,6,7"
+            }
+          }
+        },
+        {
+          "name": "Seconda",
+          "days": {
+            "lunedi": {
+              "primo": "Crema di zucca con orzo",
+              "primoA": "1,14,15",
+              "secondo": "Petto di pollo alla salvia",
+              "secondoA": "1",
+              "contorno": "Erbette o spinaci/coste",
+              "contornoA": "",
+              "frutta": "Mela",
+              "fruttaA": "",
+              "merenda": "Yogurt bianco intero e cereali integrali",
+              "merendaA": "7,1"
+            },
+            "martedi": {
+              "primo": "Pasta pasticciata al ragù",
+              "primoA": "1,14,15,16",
+              "secondo": "",
+              "secondoA": "",
+              "contorno": "Insalata bianca e verde",
+              "contornoA": "",
+              "frutta": "Banana",
+              "fruttaA": "",
+              "merenda": "Frutta cotta monoporzione con pane a fette",
+              "merendaA": "1"
+            },
+            "mercoledi": {
+              "primo": "Pasta con le zucchine",
+              "primoA": "1",
+              "secondo": "Fagioli all'uccelletto",
+              "secondoA": "14,15",
+              "contorno": "Carote cotte",
+              "contornoA": "",
+              "frutta": "Mandarino",
+              "fruttaA": "",
+              "merenda": "Un bicchiere di spremuta di arancia e biscotti secchi",
+              "merendaA": "1,3,6,7"
+            },
+            "giovedi": {
+              "primo": "Gnocchi alla romana",
+              "primoA": "1,16",
+              "secondo": "Mozzarella/grana",
+              "secondoA": "7,16",
+              "contorno": "Finocchi al velo crudi",
+              "contornoA": "",
+              "frutta": "Kiwi",
+              "fruttaA": "",
+              "merenda": "Yogurt int bianco e frutto",
+              "merendaA": "7"
+            },
+            "venerdi": {
+              "primo": "Risotto allo zafferano",
+              "primoA": "14",
+              "secondo": "Filetto di platessa gratinato",
+              "secondoA": "1,4",
+              "contorno": "Carote crude",
+              "contornoA": "",
+              "frutta": "Mandarino",
+              "fruttaA": "",
+              "merenda": "Crostata di marmellata",
+              "merendaA": "1,3,7"
+            }
+          }
+        },
+        {
+          "name": "Terza",
+          "days": {
+            "lunedi": {
+              "primo": "Passato di verdure con pasta",
+              "primoA": "1,14,15",
+              "secondo": "Frittata al forno con zucchine",
+              "secondoA": "3",
+              "contorno": "Spinaci",
+              "contornoA": "",
+              "frutta": "Banana",
+              "fruttaA": "",
+              "merenda": "Pane e marmellata",
+              "merendaA": "1"
+            },
+            "martedi": {
+              "primo": "Pasta con i broccoli",
+              "primoA": "1",
+              "secondo": "Prosciutto cotto/bresaola",
+              "secondoA": "",
+              "contorno": "Fagiolini",
+              "contornoA": "",
+              "frutta": "Kiwi",
+              "fruttaA": "",
+              "merenda": "Crackers e 1/2 banana",
+              "merendaA": "1"
+            },
+            "mercoledi": {
+              "primo": "Risotto integrale al pomodoro",
+              "primoA": "14,15",
+              "secondo": "Lenticchie",
+              "secondoA": "15",
+              "contorno": "Carote cotte",
+              "contornoA": "",
+              "frutta": "Pere",
+              "fruttaA": "",
+              "merenda": "Yogurt int bianco e cereali integrali",
+              "merendaA": "7,1"
+            },
+            "giovedi": {
+              "primo": "Pizza al pomodoro e mozzarella",
+              "primoA": "1,7,15,16",
+              "secondo": "",
+              "secondoA": "",
+              "contorno": "Insalata",
+              "contornoA": "",
+              "frutta": "Mela",
+              "fruttaA": "",
+              "merenda": "Crostata di marmellata",
+              "merendaA": "1,3,7"
+            },
+            "venerdi": {
+              "primo": "Pasta in bianco",
+              "primoA": "1",
+              "secondo": "Filetto di merluzzo gratinato",
+              "secondoA": "1,4",
+              "contorno": "Carote crude",
+              "contornoA": "",
+              "frutta": "Mandarino",
+              "fruttaA": "",
+              "merenda": "Un bicchiere di latte intero e fette biscottate con marmellata",
+              "merendaA": "7,1"
+            }
+          }
+        },
+        {
+          "name": "Quarta",
+          "days": {
+            "lunedi": {
+              "primo": "Passato di verdure con riso",
+              "primoA": "14,15",
+              "secondo": "Frittata al forno",
+              "secondoA": "3",
+              "contorno": "Fagiolini",
+              "contornoA": "",
+              "frutta": "Mela",
+              "fruttaA": "",
+              "merenda": "Spremuta con biscotti secchi",
+              "merendaA": "1,3,6,7"
+            },
+            "martedi": {
+              "primo": "Polenta",
+              "primoA": "",
+              "secondo": "Spezzatino di pollo/tacchino",
+              "secondoA": "14,15",
+              "contorno": "Insalata",
+              "contornoA": "",
+              "frutta": "Pere",
+              "fruttaA": "",
+              "merenda": "Crackers e 1/2 banana",
+              "merendaA": "1"
+            },
+            "mercoledi": {
+              "primo": "Pasta al pomodoro",
+              "primoA": "1,15",
+              "secondo": "Fagioli all'uccelletto",
+              "secondoA": "14,15",
+              "contorno": "Spinaci",
+              "contornoA": "",
+              "frutta": "Mandarino",
+              "fruttaA": "",
+              "merenda": "Frutta cotta monoporzione con pane a fette",
+              "merendaA": "1"
+            },
+            "giovedi": {
+              "primo": "Gnocchi alla romana",
+              "primoA": "1,16",
+              "secondo": "Mozzarella/grana",
+              "secondoA": "7,16",
+              "contorno": "Carote crude",
+              "contornoA": "",
+              "frutta": "Kiwi",
+              "fruttaA": "",
+              "merenda": "Un bicchiere di latte intero con cereali",
+              "merendaA": "7,1"
+            },
+            "venerdi": {
+              "primo": "Risotto con gorgonzola e radicchio",
+              "primoA": "14,16",
+              "secondo": "Filetto di platessa gratinato",
+              "secondoA": "1,4",
+              "contorno": "Finocchi al velo crudi",
+              "contornoA": "",
+              "frutta": "Banana",
+              "fruttaA": "",
+              "merenda": "Yogurt int bianco frutto",
+              "merendaA": "7"
+            }
+          }
+        }
+      ],
+      "type": "school",
+      "validFrom": "2026-10-01",
+      "validTo": "2027-03-31",
+      "sections": [
+        {
+          "id": "primo",
+          "label": "Primo"
+        },
+        {
+          "id": "secondo",
+          "label": "Secondo"
+        },
+        {
+          "id": "contorno",
+          "label": "Contorno"
+        },
+        {
+          "id": "frutta",
+          "label": "Frutta"
+        },
+        {
+          "id": "merenda",
+          "label": "Merenda"
+        }
+      ],
+      "cycle": {
+        "mode": "weekly",
+        "weeks": 4,
+        "startDate": "2026-10-05"
+      },
+      "allergenLabels": {
+        "1": "Glutine",
+        "2": "Crostacei",
+        "3": "Uova",
+        "4": "Pesce",
+        "5": "Arachidi",
+        "6": "Soia",
+        "7": "Latte e prodotti a base di latte",
+        "8": "Frutta a guscio",
+        "9": "Molluschi",
+        "10": "Lupini",
+        "11": "Anidride solforosa",
+        "12": "Semi di sesamo",
+        "13": "Senape",
+        "14": "Sedano",
+        "15": "Pomodoro",
+        "16": "Formaggio"
+      },
+      "_asiloRevision": 2
+    }
+  ]
 }
